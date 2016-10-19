@@ -1,0 +1,5 @@
+*.j
+*.class
+*.swp
+__pycache__
+*.pyc
