@@ -178,9 +178,27 @@ class FunctionApplication(Expr):
     }
 
 class Operator(Terminal):
-    values = ('+', '*', '-', '/',
-              '<', '<=', '==',
-              'ord', 'chr', 'not')
+    operators = {
+            '+': 'iadd',
+            '*': 'imul',
+            '-': 'isub',
+            '/': 'idiv',
+            '<': NotImplemented,
+            '<=': NotImplemented,
+            '==': NotImplemented,
+            'ord': NotImplemented,
+            'chr': NotImplemented,
+            'not': NotImplemented
+    }
+
+    def make_fn(self, value):
+        if value in self.operators:
+            return value
+        else:
+            raise AssertionError
+
+    def _emit(self):
+        return self.operators[self.value]
 
 class UnaryOperator(Expr):
     required_children = {
@@ -191,8 +209,16 @@ class UnaryOperator(Expr):
 class BinaryOperator(Expr):
     required_children = {
         'expr1': (Exactly(1), Expr),
-        'op': (Exactly(1), Operator)
+        'op': (Exactly(1), Operator),
+        'expr2': (Exactly(1), Expr)
     }
+
+    def _emit(self):
+        return """
+        {expr1}
+        {expr2}
+        {op}
+        """.format(expr1=self.expr1.emit(), expr2=self.expr2.emit(), op=self.op.emit())
 
 class Lists(Expr):
     required_children = {
@@ -261,6 +287,7 @@ class FunctionDeclaration(Declaration):
         .end method
 
         .method public apply()I
+        .limit stack 10
             {expr}
             ireturn
         .end method
@@ -300,5 +327,6 @@ class FunctionType(Type):
 
 if __name__ == '__main__':
     #module = Module(id=Identifier("foo"), expr=Int(42)) # module foo = 42
-    module = Module(id=Identifier("bar"), expr=Identifier("x"), decls=Declarations(decls=[FunctionDeclaration(id=Identifier("x"), expr=Int(3))])) # module bar = x where { x = 3 }
+    #module = Module(id=Identifier("bar"), expr=Identifier("x"), decls=Declarations(decls=[FunctionDeclaration(id=Identifier("x"), expr=Int(3))])) # module bar = x where { x = 3 }
+    module = Module(id=Identifier("bar"), expr=BinaryOperator(expr1=Identifier("x"), op=Operator("+"), expr2=Int(1)), decls=Declarations(decls=[FunctionDeclaration(id=Identifier("x"), expr=BinaryOperator(expr1=Int(3), op=Operator("*"), expr2=Int(2)))])) # module bar = x + 1 where { x = 3 * 2 }
     module.emit()
