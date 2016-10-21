@@ -1,7 +1,15 @@
 import string
 import collections
 
-zero_argument_fns = []
+class Scope():
+    def __init__(self):
+        self._identifiers = {}
+
+    def get_identifier(self, identifier):
+        return self._identifiers[identifier]
+
+    def add_identifier(self, identifier, value):
+        self._identifiers[identifier] = value
 
 class ASTNode():
     # Should be set in sub-classes to
@@ -16,7 +24,7 @@ class ASTNode():
 
         for name, (len_validator, typ) in self.required_children.items():
             if len_validator.valid(0) and name not in children:
-                self._children[name] = None
+                self._children[name] = []
                 continue
 
             assert name in children
@@ -68,7 +76,7 @@ class ASTNode():
 
         return ret
 
-    def _emit(self):
+    def _emit(self, scope):
         raise NotImplementedError
 
     def get_type(self):
@@ -80,14 +88,14 @@ class ASTNode():
         file name to write to. In this case, the empty string will be returned from emit()."""
         return ''
 
-    def emit(self):
+    def emit(self, scope):
         """Emits the result of self._emit() to the self._emit_target()."""
         if self._emit_target():
             with open(self._emit_target(), 'w') as outfile:
-                outfile.write(self._emit())
+                outfile.write(self._emit(scope))
             return ''
         else:
-            return self._emit()
+            return self._emit(scope)
 
 class Terminal(ASTNode):
     make_fn = NotImplemented
@@ -100,38 +108,3 @@ class Terminal(ASTNode):
     @property
     def value(self):
         return self._value
-
-class Operator(Terminal):
-    operators = {
-            '+': 'iadd',
-            '*': 'imul',
-            '-': 'isub',
-            '/': 'idiv',
-            '<': NotImplemented,
-            '<=': NotImplemented,
-            '==': NotImplemented,
-            'ord': NotImplemented,
-            'chr': NotImplemented,
-            'not': NotImplemented
-    }
-
-    def get_type(self, expr1_type, expr2_type):
-        if self.value in ('+', '-', '-', '/'):
-            return expr1_type  # Raise error if they're not the same?
-        elif self.value in ('<', '<=', '==', 'not'):
-            return bool
-        elif self.value == 'ord':
-            return int
-        elif self.value == 'chr':
-            return chr
-        else:
-            raise AssertionError
-
-    def make_fn(self, value):
-        if value in self.operators:
-            return value
-        else:
-            raise AssertionError
-
-    def _emit(self):
-        return self.operators[self.value]

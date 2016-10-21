@@ -1,6 +1,7 @@
-from ast import ASTNode
+from ast import ASTNode, Scope
 from childcount import Exactly, GreaterOrEqual
 from expression import Expr, Identifier
+from declaration import Declarations
 
 class Module(ASTNode):
     required_children = {
@@ -12,7 +13,7 @@ class Module(ASTNode):
     def _emit_target(self):
         return '{}.j'.format(self.id.value)
 
-    def _emit(self):
+    def _emit(self, scope):
         return '''
         .class public {name}
         .super java/lang/Object
@@ -31,7 +32,10 @@ class Module(ASTNode):
             invokevirtual java/io/PrintStream/println(I)V
             return
         .end method
-        '''.format(name=self.id.value, decls=self.decls.emit(), expr=self.expr.emit())
+        '''.format(name=self.id.value, decls=self.decls.emit(scope), expr=self.expr.emit(scope))
+
+    def emit(self, scope=Scope()):
+        super().emit(scope)
 
     def get_type(self):
         return self.expr.get_type()

@@ -1,6 +1,6 @@
 from module import Module
-from expression import Int, Identifier, BinaryOperator
-from declaration import FunctionDeclaration
+from expression import Int, Identifier, BinaryOperator, Operator
+from declaration import FunctionDeclaration, Declarations
 
 #module = Module(id=Identifier("foo"), expr=Int(42)) # module foo = 42
 #module = Module(id=Identifier("bar"), expr=Identifier("x"), decls=Declarations(decls=[FunctionDeclaration(id=Identifier("x"), expr=Int(3))])) # module bar = x where { x = 3 }

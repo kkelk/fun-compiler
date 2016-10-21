@@ -1,3 +1,5 @@
+import string
+
 from ast import ASTNode, Terminal
 from childcount import Exactly, GreaterOrEqual
 
@@ -12,17 +14,72 @@ class Identifier(Expr, Terminal):
 
         self._value = value
 
-    def _emit(self):
-        if self.value in zero_argument_fns:
+    def _emit(self, scope):
+        args = scope.get_identifier(self.value)
+
+        if args:
+            return """
+            new {name}Function
+            invokespecial {name}Function.<init>()V
+            """.format(name=self.value)
+        else:
             return """
             invokevirtual {name}
             """.format(name=self.value)  # TODO optimisation (in-lining) possible here
+
+class Type(ASTNode):
+    pass
+
+class NamedType(Type):
+    required_children = {
+        'id': (Exactly(1), Identifier)
+    }
+
+class ListType(Type):
+    required_children = {
+        'type': (Exactly(1), Type)
+    }
+
+class FunctionType(Type):
+    required_children = {
+        'param_type': (Exactly(1), Type),
+        'return_type': (Exactly(1), Type)
+    }
+
+class Operator(Terminal):
+    operators = {
+            '+': 'iadd',
+            '*': 'imul',
+            '-': 'isub',
+            '/': 'idiv',
+            '<': NotImplemented,
+            '<=': NotImplemented,
+            '==': NotImplemented,
+            'ord': NotImplemented,
+            'chr': NotImplemented,
+            'not': NotImplemented
+    }
+
+    def get_type(self, expr1_type, expr2_type):
+        if self.value in ('+', '-', '-', '/'):
+            return expr1_type  # Raise error if they're not the same?
+        elif self.value in ('<', '<=', '==', 'not'):
+            return bool
+        elif self.value == 'ord':
+            return int
+        elif self.value == 'chr':
+            return chr
         else:
-            return """
-            new {name}Function
-            dup
-            invokespecial {name}Function.<init>()V
-            """.format(name=self.value)
+            raise AssertionError
+
+    def make_fn(self, value):
+        if value in self.operators:
+            return value
+        else:
+            raise AssertionError
+
+    def _emit(self, scope):
+        return self.operators[self.value]
 
 class UnaryOperator(Expr):
     required_children = {
@@ -37,12 +94,12 @@ class BinaryOperator(Expr):
         'expr2': (Exactly(1), Expr)
     }
 
-    def _emit(self):
+    def _emit(self, scope):
         return """
         {expr1}
         {expr2}
         {op}
-        """.format(expr1=self.expr1.emit(), expr2=self.expr2.emit(), op=self.op.emit())
+        """.format(expr1=self.expr1.emit(scope), expr2=self.expr2.emit(scope), op=self.op.emit(scope))
 
     def get_type(self):
         return self.op.get_type(self.expr1.get_type(), self.expr2.get_type())
@@ -66,7 +123,7 @@ class TypeSpecification(Expr):
 
 class Int(Expr, Terminal):
     make_fn = int
-    def _emit(self):
+    def _emit(self, scope):
         return 'bipush {}'.format(self.value)
 
     def get_type(self):
@@ -106,10 +163,10 @@ class FunctionApplication(Expr):
         'expr': (Exactly(1), Expr)
     }
 
-    def _emit(self):
+    def _emit(self, scope):
         return """
         {func}
         {expr}
         invokevirtual {name}Function.apply()I
-        """.format(func=self.func.emit(), expr=self.expr.emit())
+        """.format(func=self.func.emit(scope), expr=self.expr.emit(scope))
 
