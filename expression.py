@@ -15,7 +15,7 @@ class Identifier(Expr, Terminal):
         self._value = value
 
     def _emit(self, scope):
-        args = scope.get_identifier(self.value)
+        return scope.get_identifier(self.value)
 
         if args:
             return """
@@ -23,9 +23,7 @@ class Identifier(Expr, Terminal):
             invokespecial {name}Function.<init>()V
             """.format(name=self.value)
         else:
-            return """
-            invokevirtual {name}
-            """.format(name=self.value)  # TODO optimisation (in-lining) possible here
+            return scope.get_identifier('{}-inline'.format(self.value))
 
 class Type(ASTNode):
     pass
@@ -166,7 +164,24 @@ class FunctionApplication(Expr):
     def _emit(self, scope):
         return """
         {func}
+        dup
+
+        getfield AbstractFunction.remaining_params I
+
+        ; Check if there is exactly 1 remaining param, in which case we need the apply that actually returns the result.
+        bipush 1
+        if_icmpeq applyfinal{label}
+
+        ; Otherwise, we need the intermediate applies that return Functions.
         {expr}
-        invokevirtual {name}Function.apply()I
-        """.format(func=self.func.emit(scope), expr=self.expr.emit(scope))
+        invokevirtual AbstractFunction.apply(I)LAbstractFunction;
+        jsr done{label}
+
+        applyfinal{label}:
+        {expr}
+        invokevirtual AbstractFunction.apply(I)I
+
+        done{label}:
+
+        """.format(func=self.func.emit(scope), expr=self.expr.emit(scope), label=scope.label)
 

@@ -2,6 +2,8 @@ from ast import ASTNode
 from childcount import Exactly, GreaterOrEqual
 from expression import Identifier, Expr, Constrs, Type
 
+from copy import deepcopy
+
 class Declaration(ASTNode):
     pass
 
@@ -24,20 +26,19 @@ class FunctionDeclaration(Declaration):
         super().__init__(*args, **kwargs)
 
     def _emit(self, scope):
-        scope.add_identifier(self.id.value, len(self.params))
-
         if self.params:
+            scope.add_identifier(self.id.value, """
+            new {name}Function
+            invokespecial {name}Function.<init>()V
+            """.format(name=self.id.value))
+
             return_str = """
             .class public {name}Function
-            .super java/lang/Object
-
-            .field private param_number I
-
-            // TODO maybe also need to track how many params are needed!
+            .super AbstractFunction
 
             .method public <init>()V
                 aload_0
-                invokenonvirtual java/lang/Object/<init>()V
+                invokenonvirtual AbstractFunction.<init>()V
                 return
             .end method"""
 
@@ -46,23 +47,31 @@ class FunctionDeclaration(Declaration):
                 .field private param_{param_num} I
 
                 .method public set_{param_num}(I)V
-                    // Increment the param_number.
-                    // We assume that each set_ will only be called once, at the correct times.
+                    ; Increment the param_number.
+                    ; We assume that each set_ will only be called once, at the correct times.
                     aload_0
                     getfield {name}Function.param_number I
                     iinc
                     aload_0
                     putfield {name}Function.param_number I
+                    
+                    ; And decrement the remaining_params, so we know when we're done.
+                    aload_0
+                    getfield {name}Function.remaining_params I
+                    bipush 1
+                    isub
+                    putfield {name}Function.remaining_params I
 
+                    ; Set the param_[param_num] variable to the argument passed.
                     aload_0
                     aload_1
                     putfield {name}Function.param_{param_num} I
                     return
                 .end method
                     
-                .method private apply_{param_num}(I)A
+                .method private apply_{param_num}(I)LAbstractFunction
                 .limit stack 10
-                    // Create a new copy of this Function, and set the value passed on it.
+                    ; Create a new copy of this Function, and set the value passed on it.
                     new {name}Function
                     invokespecial {name}Function.<init>()V
                     dup
@@ -84,20 +93,36 @@ class FunctionDeclaration(Declaration):
                 """
 
             # The final apply is different, as it returns a non-Function result.
+
+            # We need to have the parameters "in-scope", so we copy the global scope and add
+            # the code to get each of the parameters to it.
+            function_scope = deepcopy(scope)
+
+            for param, i in enumerate(self.params[:1]):
+                function_scope.add_identifier(param, '''
+                aload_0
+                getfield param_{i}
+                '''.format(i=i))
+
+            function_scope.add_identifier(self.params[-1].value, 'aload_1')
+
             return_str += """
             .method private apply_{param_num}(I)I
+            .limit locals 2
             .limit stack 10
                 {expr}
                 ireturn
             .end method
-            """.format(param_num=(len(self.params) - 1), expr=self.expr.emit(scope))
+            """.format(param_num=(len(self.params) - 1), expr=self.expr.emit(function_scope))
             
             # Top-level apply that dispatches the appropriate apply() based on state.
             # TODO need one of these for each argument type we take.
             return_str += """
-            .method public apply_partial(I)A
+            .method public apply(I)LAbstractFunction;
+                .limit locals 2
+                .limit stack 10
                 aload_0
-                getfield {name}Function.param_number
+                getfield {name}Function.param_number I
             """
 
             # Loop through each possible param number and check if its right, then jump
@@ -114,8 +139,8 @@ class FunctionDeclaration(Declaration):
                 return_str += """
                 apply_{param_num}:
                 aload_0
-                aload_1
-                invokevirtual apply_{param_num}(I)A
+                iload_1
+                invokevirtual apply_{param_num}(I)LAbstractFunction;
                 areturn
                 """.format(param_num=param_num)
 
@@ -123,18 +148,21 @@ class FunctionDeclaration(Declaration):
             .end method
             """
 
-            # Note for self tomorrow: TODO write the method for dispatching the FINAL argument
-            # Might just want to do this in the FunctionApplication though.
-            # Need to make the param_num public, or a bool whether to dispatch final maybe?
-            
-            return return_str.format(name=self.id.value)
-        else:
-            return """
-            .method public {name}V
-                {expr}
-                return
+            # And the final apply method to return the result.
+            return_str += """
+            .method public apply(I)I
+                .limit locals 2
+                .limit stack 2
+                aload_0
+                iload_1
+                invokevirtual apply_{final}(I)I
+                ireturn
             .end method
-            """.format(name=self.id.value, expr=self.expr.emit(scope))
+            """.format(final=len(self.params) - 1)
+
+            return return_str.format(name=self.id.value, param_count=len(self.params))
+        else:
+            scope.add_identifier('{}'.format(self.id.value), self.expr.emit(scope))
 
     def _emit_target(self):
         if self.params:

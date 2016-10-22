@@ -19,7 +19,7 @@ class Module(ASTNode):
         .super java/lang/Object
 
         .method public static module()I
-            .limit stack 2
+            .limit stack 10
             {decls}
             {expr}
             ireturn
@@ -36,6 +36,25 @@ class Module(ASTNode):
 
     def emit(self, scope=Scope()):
         super().emit(scope)
+        with open('AbstractFunction.j', 'w') as abstract_fn_file:
+            abstract_fn_file.write("""
+            .class public abstract AbstractFunction
+            .super java/lang/Object
+            .field public param_number I
+            .field public remaining_params I = 1
+
+            .method public <init>()V
+            aload_0
+            invokenonvirtual java/lang/Object/<init>()V
+            return
+            .end method
+
+            .method public abstract apply(I)I
+            .end method
+
+            .method public abstract apply(I)LAbstractFunction;
+            .end method
+            """)
 
     def get_type(self):
         return self.expr.get_type()

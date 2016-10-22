@@ -4,12 +4,18 @@ import collections
 class Scope():
     def __init__(self):
         self._identifiers = {}
+        self._label = 0
 
     def get_identifier(self, identifier):
         return self._identifiers[identifier]
 
     def add_identifier(self, identifier, value):
         self._identifiers[identifier] = value
+
+    @property
+    def label(self):
+        self._label += 1
+        return self._label
 
 class ASTNode():
     # Should be set in sub-classes to
@@ -90,12 +96,14 @@ class ASTNode():
 
     def emit(self, scope):
         """Emits the result of self._emit() to the self._emit_target()."""
+        emit_string = '\n'.join([line.strip() for line in self._emit(scope).split('\n') if line.strip()])
+
         if self._emit_target():
             with open(self._emit_target(), 'w') as outfile:
-                outfile.write(self._emit(scope))
+                outfile.write(emit_string)
             return ''
         else:
-            return self._emit(scope)
+            return emit_string
 
 class Terminal(ASTNode):
     make_fn = NotImplemented
