@@ -176,7 +176,7 @@ class FunctionApplication(Expr):
 
         ; Otherwise, we need the intermediate applies that return Functions.
         {expr}
-        invokevirtual AbstractFunction.apply(I)LAbstractFunction;
+        invokevirtual AbstractFunction.apply({expr_type})LAbstractFunction;
         ; FIXME TEMP WHILE WE SORT OUT TYPES
         pop
         bipush -99
@@ -184,11 +184,11 @@ class FunctionApplication(Expr):
 
         applyfinal{label}:
         {expr}
-        invokevirtual AbstractFunction.apply(I)I
+        invokevirtual AbstractFunction.apply({expr_type})I
 
         done{label}:
 
-        """.format(func=self.func.emit(scope), expr=self.expr.emit(scope), label=scope.label)
+        """.format(func=self.func.emit(scope), expr=self.expr.emit(scope), expr_type=self.expr.get_type().jvm_code, label=scope.label)
         
     def get_type(self):
         return self.func.get_type().apply(self.expr.get_type())
