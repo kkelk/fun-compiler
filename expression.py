@@ -2,9 +2,11 @@ import string
 
 from ast import ASTNode, Terminal
 from childcount import Exactly, GreaterOrEqual
+import funtype
 
 class Expr(ASTNode):
-    pass
+    def get_type(self):
+        raise NotImplementedError
 
 class Identifier(Expr, Terminal):
     def __init__(self, value):
@@ -58,15 +60,15 @@ class Operator(Terminal):
             'not': NotImplemented
     }
 
-    def get_type(self, expr1_type, expr2_type):
-        if self.value in ('+', '-', '-', '/'):
-            return expr1_type  # Raise error if they're not the same?
+    def get_type(self, expr1_type):
+        if self.value in ('+', '*', '-', '/'):
+            return expr1_type
         elif self.value in ('<', '<=', '==', 'not'):
-            return bool
+            return Type.Bool
         elif self.value == 'ord':
-            return int
+            return Type.Int
         elif self.value == 'chr':
-            return chr
+            return Type.Bool
         else:
             raise AssertionError
 
@@ -100,7 +102,7 @@ class BinaryOperator(Expr):
         """.format(expr1=self.expr1.emit(scope), expr2=self.expr2.emit(scope), op=self.op.emit(scope))
 
     def get_type(self):
-        return self.op.get_type(self.expr1.get_type(), self.expr2.get_type())
+        return self.op.get_type(self.expr1.get_type())
 
 class Lists(Expr):
     required_children = {
@@ -112,7 +114,7 @@ class Grouping(Expr):
         'expr': (Exactly(1), Expr)
     }
 
-class TypeSpecification(Expr):
+class funtypepecification(Expr):
     required_children = {
         'expr': (Exactly(1), Expr),
         'type': (Exactly(1), Type)
@@ -125,19 +127,19 @@ class Int(Expr, Terminal):
         return 'bipush {}'.format(self.value)
 
     def get_type(self):
-        return int
+        return funtype.Int
 
 class Double(Expr, Terminal):
     make_fn = float
 
     def get_type(self):
-        return float
+        return funtype.Double
 
 class Char(Expr, Terminal):
     values = tuple(string.printable)
 
     def get_type(self):
-        return chr
+        return funtype.Char
 
 class Constr(Expr):
     required_children = {
@@ -153,7 +155,7 @@ class Bool(Expr, Terminal):
     values = ('True', 'False')
 
     def get_type(self):
-        return bool
+        return funtype.Bool
 
 class FunctionApplication(Expr):
     required_children = {
@@ -187,4 +189,6 @@ class FunctionApplication(Expr):
         done{label}:
 
         """.format(func=self.func.emit(scope), expr=self.expr.emit(scope), label=scope.label)
-
+        
+    def get_type(self):
+        return self.func.get_type().apply(self.expr.get_type())
