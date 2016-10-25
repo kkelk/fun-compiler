@@ -64,11 +64,11 @@ class Operator(Terminal):
         if self.value in ('+', '*', '-', '/'):
             return expr1_type
         elif self.value in ('<', '<=', '==', 'not'):
-            return Type.Bool
+            return funtype.Bool
         elif self.value == 'ord':
-            return Type.Int
+            return funtype.Int
         elif self.value == 'chr':
-            return Type.Bool
+            return funtype.Bool
         else:
             raise AssertionError
 

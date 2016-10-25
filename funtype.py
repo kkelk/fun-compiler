@@ -1,19 +1,21 @@
 class Type:
-    pass
+    jvm_code = NotImplemented
 
 class Int(Type):
-    pass
+    jvm_code = 'I'
 
 class Double(Type):
-    pass
+    jvm_code = 'D'
 
 class Bool(Type):
-    pass
+    jvm_code = 'B'
 
 class Char(Type):
-    pass
+    jvm_code = 'C'
 
 class Function(Type):
+    jvm_code = 'LAbstractFunction;'
+
     def __init__(self, arg_types, return_type):
         self._progression = [*arg_types, return_type]
 
