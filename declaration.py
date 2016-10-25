@@ -29,6 +29,7 @@ class FunctionDeclaration(Declaration):
         if self.params:
             scope.add_identifier(self.id.value, """
             new {name}Function
+            dup
             invokespecial {name}Function.<init>()V
             """.format(name=self.id.value))
 
@@ -37,8 +38,13 @@ class FunctionDeclaration(Declaration):
             .super AbstractFunction
 
             .method public <init>()V
+                .limit stack 2
                 aload_0
-                invokenonvirtual AbstractFunction.<init>()V
+                invokenonvirtual AbstractFunction/<init>()V
+
+                aload_0
+                bipush {param_count}
+                putfield AbstractFunction.remaining_params I
                 return
             .end method"""
 
@@ -50,32 +56,32 @@ class FunctionDeclaration(Declaration):
                     ; Increment the param_number.
                     ; We assume that each set_ will only be called once, at the correct times.
                     aload_0
-                    getfield {name}Function.param_number I
+                    getfield AbstractFunction.param_number I
                     iinc
                     aload_0
-                    putfield {name}Function.param_number I
+                    putfield AbstractFunction.param_number I
                     
                     ; And decrement the remaining_params, so we know when we're done.
                     aload_0
-                    getfield {name}Function.remaining_params I
+                    getfield AbstractFunction.remaining_params I
                     bipush 1
                     isub
-                    putfield {name}Function.remaining_params I
+                    putfield AbstractFunction.remaining_params I
 
                     ; Set the param_[param_num] variable to the argument passed.
                     aload_0
-                    aload_1
+                    iload_1
                     putfield {name}Function.param_{param_num} I
                     return
                 .end method
                     
-                .method private apply_{param_num}(I)LAbstractFunction
+                .method private apply_{param_num}(I)LAbstractFunction;
                 .limit stack 10
                     ; Create a new copy of this Function, and set the value passed on it.
                     new {name}Function
                     invokespecial {name}Function.<init>()V
                     dup
-                    aload_1
+                    iload_1
                     putfield {name}Function.param_{param_num} I
                 """
 
@@ -104,7 +110,7 @@ class FunctionDeclaration(Declaration):
                 getfield param_{i}
                 '''.format(i=i))
 
-            function_scope.add_identifier(self.params[-1].value, 'aload_1')
+            function_scope.add_identifier(self.params[-1].value, 'iload_1')
 
             return_str += """
             .method private apply_{param_num}(I)I
@@ -140,9 +146,9 @@ class FunctionDeclaration(Declaration):
                 apply_{param_num}:
                 aload_0
                 iload_1
-                invokevirtual apply_{param_num}(I)LAbstractFunction;
+                invokevirtual {name}Function.apply_{param_num}(I)LAbstractFunction;
                 areturn
-                """.format(param_num=param_num)
+                """.format(name=self.id.value, param_num=param_num)
 
             return_str += """
             .end method
@@ -155,10 +161,10 @@ class FunctionDeclaration(Declaration):
                 .limit stack 2
                 aload_0
                 iload_1
-                invokevirtual apply_{final}(I)I
+                invokevirtual {name}Function.apply_{final}(I)I
                 ireturn
             .end method
-            """.format(final=len(self.params) - 1)
+            """.format(name=self.id.value, final=len(self.params) - 1)
 
             return return_str.format(name=self.id.value, param_count=len(self.params))
         else:

@@ -175,7 +175,10 @@ class FunctionApplication(Expr):
         ; Otherwise, we need the intermediate applies that return Functions.
         {expr}
         invokevirtual AbstractFunction.apply(I)LAbstractFunction;
-        jsr done{label}
+        ; FIXME TEMP WHILE WE SORT OUT TYPES
+        pop
+        bipush -99
+        goto done{label}
 
         applyfinal{label}:
         {expr}

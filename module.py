@@ -3,6 +3,8 @@ from childcount import Exactly, GreaterOrEqual
 from expression import Expr, Identifier
 from declaration import Declarations
 
+from itertools import product
+
 class Module(ASTNode):
     required_children = {
         'id': (Exactly(1), Identifier),
@@ -36,25 +38,36 @@ class Module(ASTNode):
 
     def emit(self, scope=Scope()):
         super().emit(scope)
-        with open('AbstractFunction.j', 'w') as abstract_fn_file:
-            abstract_fn_file.write("""
-            .class public abstract AbstractFunction
-            .super java/lang/Object
-            .field public param_number I
-            .field public remaining_params I = 1
 
-            .method public <init>()V
+        abstract_fn_decl = """
+        .class public abstract AbstractFunction
+        .super java/lang/Object
+        .field public param_number I
+        .field public remaining_params I = 1
+
+        .method public <init>()V
             aload_0
             invokenonvirtual java/lang/Object/<init>()V
             return
-            .end method
+        .end method
+        """
 
-            .method public abstract apply(I)I
+        # Generate an apply method in the AbstractFunction for each permutation of argtype/return type.
+        for argtype, returntype in product(['I', 'D', 'C', 'LAbstractFunction;'], repeat=2):
+            abstract_fn_decl += """
+            .method public apply({argtype}){returntype}
+                .throws InvalidArgumentException
+                .limit locals 3
+                .limit stack 2
+                new java/lang/IllegalArgumentException
+                dup
+                invokenonvirtual java/lang/IllegalArgumentException/<init>()V
+                athrow
             .end method
+            """.format(argtype=argtype, returntype=returntype)
 
-            .method public abstract apply(I)LAbstractFunction;
-            .end method
-            """)
+        with open('AbstractFunction.j', 'w') as abstract_fn_file:
+            abstract_fn_file.write(abstract_fn_decl)
 
     def get_type(self):
         return self.expr.get_type()
