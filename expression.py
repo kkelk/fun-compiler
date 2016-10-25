@@ -5,8 +5,11 @@ from childcount import Exactly, GreaterOrEqual
 import funtype
 
 class Expr(ASTNode):
-    def get_type(self):
+    def get_type(self, scope):
         raise NotImplementedError
+
+    def infer_types(self):
+        return {}
 
 class Identifier(Expr, Terminal):
     def __init__(self, value):
@@ -19,13 +22,8 @@ class Identifier(Expr, Terminal):
     def _emit(self, scope):
         return scope.get_identifier(self.value)
 
-        if args:
-            return """
-            new {name}Function
-            invokespecial {name}Function.<init>()V
-            """.format(name=self.value)
-        else:
-            return scope.get_identifier('{}-inline'.format(self.value))
+    def get_type(self, scope):
+        return scope.get_fn_type(self.value)
 
 class Type(ASTNode):
     pass
@@ -60,9 +58,9 @@ class Operator(Terminal):
             'not': NotImplemented
     }
 
-    def get_type(self, expr1_type):
+    def get_type(self, expr_type):
         if self.value in ('+', '*', '-', '/'):
-            return expr1_type
+            return expr_type
         elif self.value in ('<', '<=', '==', 'not'):
             return funtype.Bool
         elif self.value == 'ord':
@@ -71,6 +69,22 @@ class Operator(Terminal):
             return funtype.Bool
         else:
             raise AssertionError
+
+    def infer_types_unary(self, expr):
+        if self.value == 'ord':
+            return {expr: funtype.Int}
+        elif self.value == 'chr':
+            return {expr: funtype.Char}
+        elif self.value == 'not':
+            return {expr: funtype.Bool}
+
+        return {}
+
+    def infer_types_binary(self, expr1, expr2):
+        if self.value in ('<', '<=', '=='):
+            return {expr1: funtype.Bool, expr2: funtype.Bool}
+
+        # TODO rethink this?
 
     def make_fn(self, value):
         if value in self.operators:
@@ -101,8 +115,8 @@ class BinaryOperator(Expr):
         {op}
         """.format(expr1=self.expr1.emit(scope), expr2=self.expr2.emit(scope), op=self.op.emit(scope))
 
-    def get_type(self):
-        return self.op.get_type(self.expr1.get_type())
+    def get_type(self, scope):
+        return self.op.get_type(self.expr1.get_type(scope))
 
 class Lists(Expr):
     required_children = {
@@ -114,7 +128,7 @@ class Grouping(Expr):
         'expr': (Exactly(1), Expr)
     }
 
-class funtypepecification(Expr):
+class TypeSpecification(Expr):
     required_children = {
         'expr': (Exactly(1), Expr),
         'type': (Exactly(1), Type)
@@ -126,19 +140,19 @@ class Int(Expr, Terminal):
     def _emit(self, scope):
         return 'bipush {}'.format(self.value)
 
-    def get_type(self):
+    def get_type(self, scope):
         return funtype.Int
 
 class Double(Expr, Terminal):
     make_fn = float
 
-    def get_type(self):
+    def get_type(self, scope):
         return funtype.Double
 
 class Char(Expr, Terminal):
     values = tuple(string.printable)
 
-    def get_type(self):
+    def get_type(self, scope):
         return funtype.Char
 
 class Constr(Expr):
@@ -154,7 +168,7 @@ class Constrs(ASTNode):
 class Bool(Expr, Terminal):
     values = ('True', 'False')
 
-    def get_type(self):
+    def get_type(self, scope):
         return funtype.Bool
 
 class FunctionApplication(Expr):
@@ -190,5 +204,5 @@ class FunctionApplication(Expr):
 
         """.format(func=self.func.emit(scope), expr=self.expr.emit(scope), label=scope.label)
         
-    def get_type(self):
-        return self.func.get_type().apply(self.expr.get_type())
+    def get_type(self, scope):
+        return self.func.get_type(scope).apply(self.expr.get_type(scope))
