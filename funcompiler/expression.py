@@ -1,8 +1,8 @@
 import string
 
-from funcompiler.ast import ASTNode
-from funcompiler.childcount import Exactly, GreaterOrEqual
-import funcompiler.funtype as funtype
+from funast import ASTNode
+from childcount import Exactly, GreaterOrEqual
+import funtype
 
 class Expr(ASTNode):
     def get_type(self):
@@ -67,6 +67,8 @@ class Identifier(Expr):
     def value(self):
         return self._value
 
+print(Identifier)
+
 class Type(ASTNode):
     pass
 
@@ -87,6 +89,8 @@ class FunctionType(Type):
     }
 
 class Operator(ASTNode):
+    _children = {}
+
     operators = {
             '+': 'iadd',
             '*': 'imul',
@@ -101,7 +105,7 @@ class Operator(ASTNode):
     }
 
     def __init__(self, value):
-        if value in operators:
+        if value in self.operators:
             self._value = value
         else:
             raise AssertionError

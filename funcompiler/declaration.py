@@ -1,7 +1,8 @@
-from funcompiler.ast import ASTNode
-from funcompiler.childcount import Exactly, GreaterOrEqual
-from funcompiler.expression import Identifier, Expr, Constrs, Type
-from funcompiler.funtype import Function
+from funast import ASTNode
+from childcount import Exactly, GreaterOrEqual
+from expression import Identifier, Expr, Constrs, Type
+
+from funtype import Function
 
 from copy import deepcopy
 

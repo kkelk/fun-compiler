@@ -1,7 +1,7 @@
-from funcompiler.ast import Scope
-from funcompiler.module import Module
-from funcompiler.expression import *
-from funcompiler.declaration import *
+from funast import Scope
+from module import Module
+from expression import *
+from declaration import *
 
 import subprocess
 
