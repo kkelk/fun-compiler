@@ -8,7 +8,20 @@ class Expr(ASTNode):
     def get_type(self):
         raise NotImplementedError
 
-class Identifier(Expr, Terminal):
+    def infer_types(self, types):
+        """Modify the *types* dictionary to narrow down the possible types of parameters.
+        This default implementation can gain no additional information, so just returns what was given."""
+        return types
+
+    def __eq__(self, other):
+        return self.__class__ == other.__class__ and set(self._children.values()) == set(other._children.values())
+
+    def __hash__(self):
+        return hash((self.__class__, *self._children.values()))
+
+class Identifier(Expr):
+    _children = {}
+
     def __init__(self, value):
         assert type(value) is str
         assert set(value) <= set(string.ascii_letters + string.digits + '_')
@@ -19,13 +32,15 @@ class Identifier(Expr, Terminal):
     def _emit(self, scope):
         return scope.get_identifier(self.value)
 
-        if args:
-            return """
-            new {name}Function
-            invokespecial {name}Function.<init>()V
-            """.format(name=self.value)
-        else:
-            return scope.get_identifier('{}-inline'.format(self.value))
+    def __eq__(self, other):
+        return self.value == other.value
+
+    def __hash__(self):
+        return hash(self.value)
+
+    @property
+    def value(self):
+        return self._value
 
 class Type(ASTNode):
     pass
@@ -64,11 +79,11 @@ class Operator(Terminal):
         if self.value in ('+', '*', '-', '/'):
             return expr1_type
         elif self.value in ('<', '<=', '==', 'not'):
-            return funtype.Bool
+            return funtype.Bool()
         elif self.value == 'ord':
-            return funtype.Int
+            return funtype.Int()
         elif self.value == 'chr':
-            return funtype.Bool
+            return funtype.Bool()
         else:
             raise AssertionError
 
@@ -78,6 +93,41 @@ class Operator(Terminal):
         else:
             raise AssertionError
 
+    def infer_unary(self, expr, types):
+        self_mapping = {
+            'ord': funtype.Int(),
+            'chr': funtype.Char(),
+            'not': funtype.Bool()
+        }
+
+        expr_mapping = {
+            'ord': funtype.Char(),
+            'chr': funtype.Int(),
+            'not': funtype.Bool()
+        }
+       
+        types[self] = self_mapping[self.value]
+        types[expr] = expr_mapping[self.value]
+        expr.infer_types(types)
+
+    def infer_binary(self, expr1, expr2, types):
+        expr1.infer_types(types)
+        expr2.infer_types(types)
+
+        if self.value in ('<', '<=', '=='):
+            types[self] = funtype.Bool()
+        else:
+            types[self] = types[expr1]
+            types[self] = types[expr2]
+
+        types[expr1] = types[expr2]
+        types[expr2] = types[expr1]
+
+        types[expr1] = funtype.Double()
+        types[expr2] = funtype.Double()
+            
+        return types
+
     def _emit(self, scope):
         return self.operators[self.value]
 
@@ -86,6 +136,12 @@ class UnaryOperator(Expr):
         'op': (Exactly(1), Operator),
         'expr': (Exactly(1), Expr)
     }
+
+    def infer_types(self, types):
+        self.op.infer_unary(self.expr, types)
+        types[self] = types[self.op]
+
+        return types
 
 class BinaryOperator(Expr):
     required_children = {
@@ -104,42 +160,62 @@ class BinaryOperator(Expr):
     def get_type(self):
         return self.op.get_type(self.expr1.get_type())
 
+    def infer_types(self, types):
+        self.op.infer_binary(self.expr1, self.expr2, types)
+        types[self] = types[self.op]
+
+        return types
+
 class Lists(Expr):
     required_children = {
         'exprs': (GreaterOrEqual(1), Expr)
     }
+
+    def _narrow_types(self, types, typ):
+        for expr in exprs:
+            if types[expr] < typ:
+                raise AssertionError
+            elif expr not in types or types[expr] > typ:
+                types[expr] = typ
+
+    def infer_types(self, types):
+        for expr in exprs:
+            if expr in types:
+                self._narrow_types(types, types[expr])
+
+        return types
 
 class Grouping(Expr):
     required_children = {
         'expr': (Exactly(1), Expr)
     }
 
-class funtypepecification(Expr):
+class TypeSpecification(Expr):
     required_children = {
         'expr': (Exactly(1), Expr),
         'type': (Exactly(1), Type)
     }
 
 
-class Int(Expr, Terminal):
+class Int(Terminal, Expr):
     make_fn = int
     def _emit(self, scope):
         return 'bipush {}'.format(self.value)
 
     def get_type(self):
-        return funtype.Int
+        return funtype.Int()
 
-class Double(Expr, Terminal):
+class Double(Terminal, Expr):
     make_fn = float
 
     def get_type(self):
-        return funtype.Double
+        return funtype.Double()
 
-class Char(Expr, Terminal):
+class Char(Terminal, Expr):
     values = tuple(string.printable)
 
     def get_type(self):
-        return funtype.Char
+        return funtype.Char()
 
 class Constr(Expr):
     required_children = {
@@ -151,11 +227,11 @@ class Constrs(ASTNode):
         'constrs': (GreaterOrEqual(1))
     }
 
-class Bool(Expr, Terminal):
+class Bool(Terminal, Expr):
     values = ('True', 'False')
 
     def get_type(self):
-        return funtype.Bool
+        return funtype.Bool()
 
 class FunctionApplication(Expr):
     required_children = {

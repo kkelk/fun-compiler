@@ -1,16 +1,21 @@
 from ast import ASTNode
 from childcount import Exactly, GreaterOrEqual
 from expression import Identifier, Expr, Constrs, Type
+from funtype import Function
 
 from copy import deepcopy
 
 class Declaration(ASTNode):
-    pass
+    def __init__(self, scope, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 class Declarations(ASTNode):
     required_children = {
         'decls': (GreaterOrEqual(0), Declaration)
     }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def _emit(self, scope):
         return '\n'.join(map(lambda x: x.emit(scope), self.decls))
@@ -22,8 +27,16 @@ class FunctionDeclaration(Declaration):
         'expr': (Exactly(1), Expr)
     }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, scope, *args, **kwargs):
+        super().__init__(scope, *args, **kwargs)
+
+        types = Function.infer_types(self.params, self.expr)
+        
+        param_types = []
+        for param in self.params:
+            param_types.append(types[param])
+
+        scope.add_function(self.id, Function(param_types, types[self.expr]))
 
     def _emit(self, scope):
         if self.params:

@@ -5,12 +5,19 @@ class Scope():
     def __init__(self):
         self._identifiers = {}
         self._label = 0
+        self._function_types = {}
 
     def get_identifier(self, identifier):
         return self._identifiers[identifier]
 
     def add_identifier(self, identifier, value):
         self._identifiers[identifier] = value
+
+    def add_function(self, fn_id, fn_type):
+        self._function_types[fn_id] = fn_type
+
+    def get_function_type(self, fn_id):
+        return self._function_types[fn_id]
 
     @property
     def label(self):
@@ -116,3 +123,16 @@ class Terminal(ASTNode):
     @property
     def value(self):
         return self._value
+
+    def get_type(self):
+        raise NotImplementedError
+
+    def infer_types(self, types):
+        types[self] = self.get_type()
+        return types
+
+    def __eq__(self, other):
+        return self.value == other.value
+
+    def __hash__(self):
+        return hash(self.value)
