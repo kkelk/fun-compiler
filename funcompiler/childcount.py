@@ -1,4 +1,4 @@
-class ChildCount():
+class ChildCount:
     def valid(self, value):
         """Should be overriden by subclasses to return a boolean indicating whether the given *value* is a valid number for that instance."""
         raise NotImplementedError

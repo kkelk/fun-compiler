@@ -1,7 +1,7 @@
 import string
 import collections
 
-class Scope():
+class Scope:
     def __init__(self):
         self._identifiers = {}
         self._label = 0
@@ -24,7 +24,7 @@ class Scope():
         self._label += 1
         return self._label
 
-class ASTNode():
+class ASTNode:
     # Should be set in sub-classes to
     # a dict of {name: (ChildCount, ASTNode)}
     required_children = NotImplemented
@@ -50,6 +50,9 @@ class ASTNode():
                     assert isinstance(item, typ)
             else:
                 count = 1
+                print(val)
+                print(typ)
+                print(type(val))
                 assert isinstance(val, typ)
 
             assert len_validator.valid(count)
@@ -111,28 +114,3 @@ class ASTNode():
             return ''
         else:
             return emit_string
-
-class Terminal(ASTNode):
-    make_fn = NotImplemented
-    _children = {}
-
-    def __init__(self, value):
-        assert self.make_fn is not NotImplemented
-        self._value = self.make_fn(value)
-
-    @property
-    def value(self):
-        return self._value
-
-    def get_type(self):
-        raise NotImplementedError
-
-    def infer_types(self, types):
-        types[self] = self.get_type()
-        return types
-
-    def __eq__(self, other):
-        return self.value == other.value
-
-    def __hash__(self):
-        return hash(self.value)

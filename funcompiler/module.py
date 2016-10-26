@@ -1,7 +1,7 @@
-from ast import ASTNode, Scope
-from childcount import Exactly, GreaterOrEqual
-from expression import Expr, Identifier
-from declaration import Declarations
+from funcompiler.ast import ASTNode, Scope
+from funcompiler.childcount import Exactly, GreaterOrEqual
+from funcompiler.expression import Expr, Identifier
+from funcompiler.declaration import Declaration
 
 from itertools import product
 
@@ -9,7 +9,7 @@ class Module(ASTNode):
     required_children = {
         'id': (Exactly(1), Identifier),
         'expr': (Exactly(1), Expr),
-        'decls': (GreaterOrEqual(0), Declarations)
+        'decls': (GreaterOrEqual(0), Declaration)
     }
 
     def _emit_target(self):
@@ -34,7 +34,7 @@ class Module(ASTNode):
             invokevirtual java/io/PrintStream/println(I)V
             return
         .end method
-        '''.format(name=self.id.value, decls=self.decls.emit(scope), expr=self.expr.emit(scope))
+        '''.format(name=self.id.value, decls='\n'.join(map(lambda x: x.emit(scope), self.decls), expr=self.expr.emit(scope)))
 
     def emit(self, scope=Scope()):
         super().emit(scope)

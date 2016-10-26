@@ -1,8 +1,8 @@
 import string
 
-from ast import ASTNode, Terminal
-from childcount import Exactly, GreaterOrEqual
-import funtype
+from funcompiler.ast import ASTNode
+from funcompiler.childcount import Exactly, GreaterOrEqual
+import funcompiler.funtype as funtype
 
 class Expr(ASTNode):
     def get_type(self):
@@ -18,6 +18,31 @@ class Expr(ASTNode):
 
     def __hash__(self):
         return hash((self.__class__, *self._children.values()))
+
+class Terminal(Expr):
+    make_fn = NotImplemented
+    _children = {}
+
+    def __init__(self, value):
+        assert self.make_fn is not NotImplemented
+        self._value = self.make_fn(value)
+
+    @property
+    def value(self):
+        return self._value
+
+    def get_type(self):
+        raise NotImplementedError
+
+    def infer_types(self, types):
+        types[self] = self.get_type()
+        return types
+
+    def __eq__(self, other):
+        return self.value == other.value
+
+    def __hash__(self):
+        return hash(self.value)
 
 class Identifier(Expr):
     _children = {}
@@ -61,7 +86,7 @@ class FunctionType(Type):
         'return_type': (Exactly(1), Type)
     }
 
-class Operator(Terminal):
+class Operator(ASTNode):
     operators = {
             '+': 'iadd',
             '*': 'imul',
@@ -74,6 +99,22 @@ class Operator(Terminal):
             'chr': NotImplemented,
             'not': NotImplemented
     }
+
+    def __init__(self, value):
+        if value in operators:
+            self._value = value
+        else:
+            raise AssertionError
+
+    @property
+    def value(self):
+        return self._value
+
+    def __eq__(self, other):
+        return self.value == other.value
+
+    def __hash__(self):
+        return hash(self.value)
 
     def get_type(self, expr1_type):
         if self.value in ('+', '*', '-', '/'):
@@ -197,7 +238,7 @@ class TypeSpecification(Expr):
     }
 
 
-class Int(Terminal, Expr):
+class Int(Terminal):
     make_fn = int
     def _emit(self, scope):
         return 'bipush {}'.format(self.value)
@@ -205,13 +246,13 @@ class Int(Terminal, Expr):
     def get_type(self):
         return funtype.Int()
 
-class Double(Terminal, Expr):
+class Double(Terminal):
     make_fn = float
 
     def get_type(self):
         return funtype.Double()
 
-class Char(Terminal, Expr):
+class Char(Terminal):
     values = tuple(string.printable)
 
     def get_type(self):
@@ -227,7 +268,7 @@ class Constrs(ASTNode):
         'constrs': (GreaterOrEqual(1))
     }
 
-class Bool(Terminal, Expr):
+class Bool(Terminal):
     values = ('True', 'False')
 
     def get_type(self):

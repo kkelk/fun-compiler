@@ -1,24 +1,13 @@
-from ast import ASTNode
-from childcount import Exactly, GreaterOrEqual
-from expression import Identifier, Expr, Constrs, Type
-from funtype import Function
+from funcompiler.ast import ASTNode
+from funcompiler.childcount import Exactly, GreaterOrEqual
+from funcompiler.expression import Identifier, Expr, Constrs, Type
+from funcompiler.funtype import Function
 
 from copy import deepcopy
 
 class Declaration(ASTNode):
     def __init__(self, scope, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-class Declarations(ASTNode):
-    required_children = {
-        'decls': (GreaterOrEqual(0), Declaration)
-    }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def _emit(self, scope):
-        return '\n'.join(map(lambda x: x.emit(scope), self.decls))
 
 class FunctionDeclaration(Declaration):
     required_children = {
