@@ -1,7 +1,7 @@
-from funast import ASTNode, Scope
-from childcount import Exactly, GreaterOrEqual
-from expression import Expr, Identifier
-from declaration import Declaration
+from funcompiler.funast import ASTNode, Scope
+from funcompiler.childcount import Exactly, GreaterOrEqual
+from funcompiler.expression import Expr, Identifier
+from funcompiler.declaration import Declaration
 
 from itertools import product
 

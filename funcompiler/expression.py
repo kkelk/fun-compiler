@@ -1,8 +1,8 @@
 import string
 
-from funast import ASTNode
-from childcount import Exactly, GreaterOrEqual
-import funtype
+from funcompiler.funast import ASTNode
+from funcompiler.childcount import Exactly, GreaterOrEqual
+from funcompiler import funtype
 
 class Expr(ASTNode):
     def get_type(self):

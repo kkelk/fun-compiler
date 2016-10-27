@@ -1,8 +1,8 @@
-from funast import ASTNode
-from childcount import Exactly, GreaterOrEqual
-from expression import Identifier, Expr, Constrs, Type
+from funcompiler.funast import ASTNode
+from funcompiler.childcount import Exactly, GreaterOrEqual
+from funcompiler.expression import Identifier, Expr, Constrs, Type
 
-from funtype import Function
+from funcompiler.funtype import Function
 
 from copy import deepcopy
 
@@ -172,6 +172,7 @@ class FunctionDeclaration(Declaration):
             return return_str.format(name=self.id.value, param_count=len(self.params))
         else:
             scope.add_identifier('{}'.format(self.id.value), self.expr.emit(scope))
+            return ''
 
     def _emit_target(self):
         if self.params:
