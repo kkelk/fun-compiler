@@ -50,9 +50,6 @@ class ASTNode:
                     assert isinstance(item, typ)
             else:
                 count = 1
-                print(val)
-                print(typ)
-                print(type(val))
                 assert isinstance(val, typ)
 
             assert len_validator.valid(count)

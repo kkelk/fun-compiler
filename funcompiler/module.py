@@ -2,11 +2,11 @@ from funcompiler.funast import ASTNode, Scope
 from funcompiler.childcount import Exactly, GreaterOrEqual
 from funcompiler.expression import Expr, Identifier
 from funcompiler.declaration import Declaration
+from funcompiler import util
 
 from itertools import product
 
 class Module(ASTNode):
-    print(Identifier)
     required_children = {
         'id': (Exactly(1), Identifier),
         'expr': (Exactly(1), Expr),
@@ -21,21 +21,21 @@ class Module(ASTNode):
         .class public {name}
         .super java/lang/Object
 
-        .method public static module()I
+        .method public static module()Ljava/lang/Object;
             .limit stack 10
             {decls}
             {expr}
-            ireturn
+            areturn
         .end method
 
         .method public static main([Ljava/lang/String;)V
             .limit stack 2
             getstatic java/lang/System/out Ljava/io/PrintStream;
-            invokestatic {name}.module()I
-            invokevirtual java/io/PrintStream/println(I)V
+            invokestatic {name}.module()Ljava/lang/Object;
+            invokevirtual java/io/PrintStream/println(Ljava/lang/Object;)V
             return
         .end method
-        '''.format(name=self.id.value, decls='\n'.join(map(lambda x: x.emit(scope), self.decls)), expr=self.expr.emit(scope))
+        '''.format(name=self.id.value, conversion=util.integer_to_int(), decls='\n'.join(map(lambda x: x.emit(scope), self.decls)), expr=self.expr.emit(scope))
 
     def emit(self, scope=Scope()):
         super().emit(scope)
@@ -43,29 +43,18 @@ class Module(ASTNode):
         abstract_fn_decl = """
         .class public abstract AbstractFunction
         .super java/lang/Object
-        .field public param_number I
-        .field public remaining_params I = 1
+        .field protected param_number I
+        .field protected remaining_params I = 1
 
         .method public <init>()V
             aload_0
             invokenonvirtual java/lang/Object/<init>()V
             return
         .end method
+        
+        .method public abstract apply(Ljava/lang/Object;)Ljava/lang/Object;
+        .end method
         """
-
-        # Generate an apply method in the AbstractFunction for each permutation of argtype/return type.
-        for argtype, returntype in product(['I', 'D', 'C', 'LAbstractFunction;'], repeat=2):
-            abstract_fn_decl += """
-            .method public apply({argtype}){returntype}
-                .throws InvalidArgumentException
-                .limit locals 3
-                .limit stack 2
-                new java/lang/IllegalArgumentException
-                dup
-                invokenonvirtual java/lang/IllegalArgumentException/<init>()V
-                athrow
-            .end method
-            """.format(argtype=argtype, returntype=returntype)
 
         with open('AbstractFunction.j', 'w') as abstract_fn_file:
             abstract_fn_file.write(abstract_fn_decl)

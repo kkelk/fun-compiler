@@ -5,10 +5,12 @@ from funcompiler.declaration import *
 
 import subprocess
 
+DELETE_ON_FAIL = False
+
 def run(module_name):
-    make_process = subprocess.run('java -jar jasmin.jar *.j', shell=True, check=True)
+    subprocess.run('java -jar jasmin.jar *.j', shell=True, check=True)
     out = subprocess.check_output(['java', module_name])
-    clean_process = subprocess.run('rm *.j *.class', shell=True)
+    subprocess.run('rm -f *.j *.class', shell=True)
 
     return out.decode('utf-8').strip()
 
@@ -18,7 +20,12 @@ def check(module, expected_output, scope=None):
         scope = Scope()
 
     module.emit(scope)
-    assert run(module.id.value) == str(expected_output)
+    try:
+        assert run(module.id.value) == str(expected_output)
+    except:
+        if DELETE_ON_FAIL:
+            subprocess.run('rm -f *.j *.class', shell=True)
+        raise
 
 def test_int():
     module = Module(id=Identifier("foo"), expr=Int(42)) # module foo = 42

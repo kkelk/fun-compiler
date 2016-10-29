@@ -3,6 +3,7 @@ import string
 from funcompiler.funast import ASTNode
 from funcompiler.childcount import Exactly, GreaterOrEqual
 from funcompiler import funtype
+from funcompiler import util
 
 class Expr(ASTNode):
     def get_type(self):
@@ -66,8 +67,6 @@ class Identifier(Expr):
     @property
     def value(self):
         return self._value
-
-print(Identifier)
 
 class Type(ASTNode):
     pass
@@ -174,7 +173,14 @@ class Operator(ASTNode):
         return types
 
     def _emit(self, scope):
-        return self.operators[self.value]
+        return """
+        {toint}
+        swap
+        {toint}
+        swap
+        {op}
+        {tointeger}
+        """.format(toint=util.integer_to_int(), op=self.operators[self.value], tointeger=util.int_to_integer())
 
 class UnaryOperator(Expr):
     required_children = {
@@ -245,7 +251,7 @@ class TypeSpecification(Expr):
 class Int(Terminal):
     make_fn = int
     def _emit(self, scope):
-        return 'bipush {}'.format(self.value)
+        return 'ldc {}'.format(self.value) + util.int_to_integer()
 
     def get_type(self):
         return funtype.Int()
@@ -255,6 +261,9 @@ class Double(Terminal):
 
     def get_type(self):
         return funtype.Double()
+
+    def _emit(self, scope):
+        return 'ldc2_w {}'.format(self.value) + util.double_to_Double()
 
 class Char(Terminal):
     values = tuple(string.printable)
@@ -288,27 +297,8 @@ class FunctionApplication(Expr):
         return """
         {func}
         dup
-
-        getfield AbstractFunction.remaining_params I
-
-        ; Check if there is exactly 1 remaining param, in which case we need the apply that actually returns the result.
-        bipush 1
-        if_icmpeq applyfinal{label}
-
-        ; Otherwise, we need the intermediate applies that return Functions.
         {expr}
-        invokevirtual AbstractFunction.apply({expr_type})LAbstractFunction;
-        ; FIXME TEMP WHILE WE SORT OUT TYPES
-        pop
-        bipush -99
-        goto done{label}
-
-        applyfinal{label}:
-        {expr}
-        invokevirtual AbstractFunction.apply({expr_type})I
-
-        done{label}:
-
+        invokevirtual AbstractFunction.apply(Ljava/lang/Object;)Ljava/lang/Object;
         """.format(func=self.func.emit(scope), expr=self.expr.emit(scope), expr_type=self.expr.get_type().jvm_code, label=scope.label)
         
     def get_type(self):
