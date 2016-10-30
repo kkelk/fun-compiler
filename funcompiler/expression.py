@@ -202,6 +202,8 @@ class BinaryOperator(Expr):
     }
 
     def _emit(self, scope):
+        print("here4")
+        print(scope._identifiers)
         return """
         {expr1}
         {expr2}
@@ -296,6 +298,7 @@ class FunctionApplication(Expr):
     def _emit(self, scope):
         return """
         {func}
+        checkcast AbstractFunction
         dup
         {expr}
         invokevirtual AbstractFunction.apply(Ljava/lang/Object;)Ljava/lang/Object;

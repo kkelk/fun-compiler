@@ -40,7 +40,7 @@ class ASTNode:
                 self._children[name] = []
                 continue
 
-            assert name in children
+            assert name in children, "Required child named \"{}\" was not present in \"{}\" node".format(name, self.__class__.__name__)
 
             val = children[name]
             if isinstance(val, collections.Iterable):

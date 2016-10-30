@@ -38,8 +38,14 @@ class FunctionDeclaration(Declaration):
 
             return_str = """
             .class public {name}Function
-            .super AbstractFunction
+            .super AbstractFunction"""
 
+            for param_num in range(len(self.params[:-1])):
+                return_str += """
+                .field private param_{param_num} Ljava/lang/Object;
+                """.format(param_num=param_num)
+
+            return_str += """
             .method public <init>()V
                 .limit stack 2
                 aload_0
@@ -53,22 +59,26 @@ class FunctionDeclaration(Declaration):
 
             for param_num in range(len(self.params[:-1])):
                 return_str += """
-                .field private param_{param_num} Ljava/lang/Object;
-
-                .method public set_{param_num}(Ljava/lang/Object)V
+                .method public set_{param_num}(Ljava/lang/Object;)V
                     ; Increment the param_number.
                     ; We assume that each set_ will only be called once, at the correct times.
+                    .limit locals 2
+                    .limit stack 10
                     aload_0
                     getfield AbstractFunction.param_number I
-                    iinc
+                    iconst_1
+                    iadd
                     aload_0
+                    swap
                     putfield AbstractFunction.param_number I
                     
                     ; And decrement the remaining_params, so we know when we're done.
                     aload_0
                     getfield AbstractFunction.remaining_params I
-                    bipush 1
+                    iconst_1
                     isub
+                    aload_0
+                    swap
                     putfield AbstractFunction.remaining_params I
 
                     ; Set the param_[param_num] variable to the argument passed.
@@ -78,15 +88,17 @@ class FunctionDeclaration(Declaration):
                     return
                 .end method
                     
-                .method private apply_{param_num}(Ljava/lang/Object)Ljava/lang/Object;
+                .method private apply_{param_num}(Ljava/lang/Object;)Ljava/lang/Object;
                 .limit stack 10
+                .limit locals 2
                     ; Create a new copy of this Function, and set the value passed on it.
                     new {name}Function
+                    dup
                     invokespecial {name}Function.<init>()V
                     dup
                     aload_1
                     putfield {name}Function.param_{param_num} Ljava/lang/Object;
-                """
+                """.format(name=self.id.value, param_num=param_num)
 
                 # Fill in all of the previously set parameters from *this* Function instance.
                 for i in range(param_num):
@@ -98,6 +110,7 @@ class FunctionDeclaration(Declaration):
                     """.format(name=self.id.value, i=i)
 
                 return_str += """
+                areturn
                 .end method
                 """
 
@@ -107,14 +120,17 @@ class FunctionDeclaration(Declaration):
             # the code to get each of the parameters to it.
             function_scope = deepcopy(scope)
 
-            for param, i in enumerate(self.params[:1]):
-                function_scope.add_identifier(param, '''
+            for i, param in enumerate(self.params[:-1]):
+                function_scope.add_identifier(param.value, '''
                 aload_0
                 getfield {name}Function.param_{i} Ljava/lang/Object;
                 '''.format(name=self.id.value, i=i))
 
+            print(list(map(lambda x: x.value, self.params)))
             function_scope.add_identifier(self.params[-1].value, 'aload_1')
+            print(function_scope._identifiers)
 
+            print("here1")
             return_str += """
             .method private apply_{param_num}(Ljava/lang/Object;)Ljava/lang/Object;
             .limit locals 2
@@ -123,9 +139,10 @@ class FunctionDeclaration(Declaration):
                 areturn
             .end method
             """.format(param_num=(len(self.params) - 1), expr=self.expr.emit(function_scope))
+
+            print("here2")
             
             # Top-level apply that dispatches the appropriate apply() based on state.
-            # TODO need one of these for each argument type we take.
             return_str += """
             .method public apply(Ljava/lang/Object;)Ljava/lang/Object;
                 .limit locals 2
@@ -136,7 +153,7 @@ class FunctionDeclaration(Declaration):
 
             # Loop through each possible param number and check if its right, then jump
             # to the appropriate dispatch.
-            for param_num in range(len(self.params[:1])):
+            for param_num in range(len(self.params)):
                 return_str += """
                 dup
                 bipush {param_num}
@@ -144,7 +161,7 @@ class FunctionDeclaration(Declaration):
                 """.format(param_num=param_num)
 
             # Add all of the dispatches with labels.
-            for param_num in range(len(self.params[:1])):
+            for param_num in range(len(self.params)):
                 return_str += """
                 apply_{param_num}:
                 aload_0

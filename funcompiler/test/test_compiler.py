@@ -10,7 +10,6 @@ DELETE_ON_FAIL = False
 def run(module_name):
     subprocess.run('java -jar jasmin.jar *.j', shell=True, check=True)
     out = subprocess.check_output(['java', module_name])
-    subprocess.run('rm -f *.j *.class', shell=True)
 
     return out.decode('utf-8').strip()
 
@@ -22,6 +21,7 @@ def check(module, expected_output, scope=None):
     module.emit(scope)
     try:
         assert run(module.id.value) == str(expected_output)
+        subprocess.run('rm -f *.j *.class', shell=True)
     except:
         if DELETE_ON_FAIL:
             subprocess.run('rm -f *.j *.class', shell=True)
@@ -49,3 +49,30 @@ def test_one_arg():
     module = Module(id=Identifier("bar"), expr=FunctionApplication(func=Identifier("f"), expr=Int(2)), decls=[FunctionDeclaration(scope, id=Identifier("f"), params=[Identifier("x")], expr=BinaryOperator(expr1=Identifier("x"), op=Operator("*"), expr2=Int(3)))]) # module bar = f 2 where { f x = x * 3 }
 
     check(module, 6, scope)
+
+def test_two_args():
+    scope = Scope()
+
+    # module bar = mul 2 5 where { mul x y = x * y }
+    module = Module(
+            id=Identifier("bar"),
+            expr=FunctionApplication(
+                func=FunctionApplication(
+                    func=Identifier("mul"),
+                    expr=Int(2)
+                ),
+                expr=Int(5)
+            ),
+            decls=[FunctionDeclaration(
+                scope,
+                id=Identifier("mul"),
+                params=[Identifier("x"), Identifier("y")],
+                expr=BinaryOperator(
+                    expr1=Identifier("x"),
+                    op=Operator("*"),
+                    expr2=Identifier("y")
+                )
+            )]
+    )
+
+    check(module, 10, scope)
