@@ -209,3 +209,39 @@ def test_two_args():
     )
 
     check(module, 10, scope)
+
+def test_lists():
+    # module ListTest = [5, 10]
+    module = Module(
+            id=Identifier("ListTest"),
+            expr=Lists(
+                exprs=[
+                    Int(5),
+                    BinaryOperator(expr1=Int(10), op=Operator('-'), expr2=Int(4))
+                ]
+            )
+    )
+
+    check(module, [5, 6])
+
+def test_list_function():
+    scope = Scope()
+
+    # module ListFunctionTest = testlist [3, 4] where { testlist x = x }
+    module = Module(
+            id=Identifier("ListFunctionTest"),
+            expr=FunctionApplication(
+                func=Identifier("testlist"),
+                expr=Lists(
+                    exprs=[Int(3), Int(4)]
+                )
+            ),
+            decls=[FunctionDeclaration(
+                scope,
+                id=Identifier("testlist"),
+                params=[Identifier("x")],
+                expr=Identifier("x")
+            )]
+    )
+
+    check(module, [3, 4], scope)

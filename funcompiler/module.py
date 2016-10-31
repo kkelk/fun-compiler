@@ -3,6 +3,7 @@ from funcompiler.childcount import Exactly, GreaterOrEqual
 from funcompiler.expression import Expr, Identifier
 from funcompiler.declaration import Declaration
 from funcompiler import util
+from funcompiler import funtype
 
 from itertools import product
 
@@ -17,7 +18,7 @@ class Module(ASTNode):
         return '{}.j'.format(self.id.value)
 
     def _emit(self, scope):
-        return '''
+        return_str = """
         .class public {name}
         .super java/lang/Object
 
@@ -29,13 +30,15 @@ class Module(ASTNode):
         .end method
 
         .method public static main([Ljava/lang/String;)V
-            .limit stack 2
+            .limit stack 10
             getstatic java/lang/System/out Ljava/io/PrintStream;
             invokestatic {name}.module()Ljava/lang/Object;
             invokevirtual java/io/PrintStream/println(Ljava/lang/Object;)V
             return
         .end method
-        '''.format(name=self.id.value, conversion=util.integer_to_int(), decls='\n'.join(map(lambda x: x.emit(scope), self.decls)), expr=self.expr.emit(scope))
+        """
+
+        return return_str.format(name=self.id.value, conversion=util.integer_to_int(), decls='\n'.join(map(lambda x: x.emit(scope), self.decls)), expr=self.expr.emit(scope))
 
     def emit(self, scope=Scope()):
         super().emit(scope)

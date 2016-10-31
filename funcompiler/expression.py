@@ -248,6 +248,9 @@ class UnaryOperator(Expr):
         {op}
         """.format(expr=self.expr.emit(scope), op=self.op.emit(self.expr.get_type(scope), binary=False))
 
+    def get_type(self, scope):
+        return self.op.get_type(self.expr.get_type(scope))
+
 class BinaryOperator(Expr):
     required_children = {
         'expr1': (Exactly(1), Expr),
@@ -276,6 +279,9 @@ class Lists(Expr):
         'exprs': (GreaterOrEqual(1), Expr)
     }
 
+    def get_type(self, scope):
+        return funtype.List(self.exprs[0].get_type(scope))
+
     def _narrow_types(self, types, typ):
         for expr in exprs:
             if types[expr] < typ:
@@ -289,6 +295,24 @@ class Lists(Expr):
                 self._narrow_types(types, types[expr])
 
         return types
+
+    def _emit(self, scope):
+        return_str = """
+        new java/util/LinkedList
+        dup
+        invokenonvirtual java/util/LinkedList/<init>()V
+        """
+
+        for expr in self.exprs:
+            return_str += """
+            dup
+            {expr}
+            invokevirtual java/util/LinkedList.add(Ljava/lang/Object;)Z
+            pop
+            """.format(expr=expr.emit(scope))
+
+        return return_str
+
 
 class Grouping(Expr):
     required_children = {

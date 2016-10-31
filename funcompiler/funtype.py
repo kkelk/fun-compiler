@@ -43,6 +43,16 @@ class Char(Type):
     jvm_code = 'C'
     wideness = 5
 
+class List(Type):
+    wideness = 5
+
+    def __init__(self, inner_type):
+        self._inner_type = inner_type
+
+    @property
+    def inner_type(self):
+        return self._inner_type
+
 class _ChangeTrackingDict(dict):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -70,7 +80,7 @@ class Function(Type):
         return ' -> '.join(map(str, self._progression))
 
     def apply(self, typ):
-        assert isinstance(typ, self._progression[0])
+        assert isinstance(self._progression[0], GenericType) or isinstance(typ, self._progression[0].__class__)
         
         if len(self._progression) == 2:
             return self._progression[1]
