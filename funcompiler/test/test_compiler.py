@@ -138,26 +138,26 @@ def test_int_operators():
 def test_double_operators():
     scope = Scope()
 
-    # module DoubleOperatorsTest = x + 1 where { x = 3 * 2 }
+    # module DoubleOperatorsTest = x + 3.5 where { x = 3.0 * 7.0 }
     module = Module(
             id=Identifier("DoubleOperatorsTest"),
             expr=BinaryOperator(
                 expr1=Identifier("x"),
                 op=Operator("+"),
-                expr2=Double(1)
+                expr2=Double(3.5)
             ),
             decls=[FunctionDeclaration(
                 scope,
                 id=Identifier("x"),
                 expr=BinaryOperator(
-                    expr1=Double(3),
+                    expr1=Double(3.0),
                     op=Operator("*"),
-                    expr2=Double(2)
+                    expr2=Double(7.0)
                 )
             )]
     )
     
-    check(module, 7.0, scope)
+    check(module, 24.5, scope)
 
 def test_one_arg():
     scope = Scope()
