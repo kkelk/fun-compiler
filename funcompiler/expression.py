@@ -116,10 +116,46 @@ class Operator(ASTNode):
 
     # Mapping from operators to (integer, double) bytecode versions
     boolean_operators = {
-            '<': (NotImplemented, NotImplemented),
-            '<=': (NotImplemented, NotImplemented),
-            '==': (NotImplemented, NotImplemented),
-            'not': (NotImplemented, NotImplemented)
+            '<': {
+                    funtype.Int: '''
+                    invokevirtual java/lang/Integer.compareTo(Ljava/lang/Integer;)I
+                    iflt true_return
+                    goto false_return''',
+                    funtype.Double: '''
+                    invokevirtual java/lang/Double.compareTo(Ljava/lang/Double;)I
+                    iflt true_return
+                    goto false_return
+                    '''
+                },
+            '<=': {
+                   funtype.Int: '''
+                   invokevirtual java/lang/Integer.compareTo(Ljava/lang/Integer;)I
+                   ifle true_return
+                   goto false_return
+                   ''',
+                   funtype.Double: '''
+                   invokevirtual java/lang/Double.compareTo(Ljava/lang/Double;)I
+                   ifle true_return
+                   goto false_return
+                   '''
+                   },
+            '==': {funtype.Int: '''
+                   invokevirtual java/lang/Integer.compareTo(Ljava/lang/Integer;)I
+                   ifeq true_return
+                   goto false_return
+                   ''',
+                   funtype.Double: '''
+                   invokevirtual java/lang/Double.compareTo(Ljava/lang/Double;)I
+                   ifeq true_return
+                   goto false_return
+                   '''
+                   },
+            'not': {funtype.Bool: '''
+                   invokevirtual java/lang/Boolean.booleanValue()Z
+                   ifeq true_return
+                   goto false_return
+                   '''
+                   }
     }
 
     numeric_operators = {
@@ -222,34 +258,50 @@ class Operator(ASTNode):
     def emit(self, expr_type, binary):
         op = self.operators[self.value][type(expr_type)]
 
-        if binary:
-            if isinstance(expr_type, funtype.Int):
-                return """
-                {toint}
-                swap
-                {toint}
-                swap
-                {op}
-                {tointeger}
-                """.format(toint=util.integer_to_int(), op=op, tointeger=util.int_to_integer())
+        if self.value in self.numeric_operators:
+            if binary:
+                if isinstance(expr_type, funtype.Int):
+                    return """
+                    {toint}
+                    swap
+                    {toint}
+                    swap
+                    {op}
+                    {tointeger}
+                    """.format(toint=util.integer_to_int(), op=op, tointeger=util.int_to_integer())
+                else:
+                    return """
+                    {todouble}
+                    dup2_x1
+                    pop2
+                    {todouble}
+                    dup2_x2
+                    pop2
+                    {op}
+                    {toDouble}
+                    """.format(todouble=util.Double_to_double(), op=op, toDouble=util.double_to_Double())
             else:
-                return """
-                {todouble}
-                dup2_x1
-                pop2
-                {todouble}
-                dup2_x2
-                pop2
-                {op}
-                {toDouble}
-                """.format(todouble=util.Double_to_double(), op=op, toDouble=util.double_to_Double())
+                conversion = {
+                    funtype.Char: util.Character_to_char(),
+                    funtype.Int: util.integer_to_int(),
+                    funtype.Double: util.Double_to_double()
+                }
+                return conversion[type(expr_type)] + op
         else:
-            conversion = {
-                funtype.Char: util.Character_to_char(),
-                funtype.Int: util.integer_to_int(),
-                funtype.Double: util.Double_to_double()
-            }
-            return conversion[type(expr_type)] + op
+            print(op)
+            return """
+            {comparison}
+            true_return:
+            iconst_1
+            goto done
+            
+            false_return:
+            iconst_0
+            goto done
+
+            done:
+            invokestatic java/lang/Boolean.valueOf(Z)Ljava/lang/Boolean;
+            """.format(comparison=op)
 
 class UnaryOperator(Expr):
     required_children = {
@@ -392,9 +444,17 @@ class Constrs(ASTNode):
 
 class Bool(Terminal):
     values = ('True', 'False')
+    make_fn = lambda self, x: x
 
     def get_type(self, scope):
         return funtype.Bool()
+
+    def _emit(self, scope):
+        val = 1 if self.value == 'True' else 0
+        return '''
+        iconst_{val}
+        invokestatic java/lang/Boolean.valueOf(Z)Ljava/lang/Boolean;
+        '''.format(val=val)
 
 class FunctionApplication(Expr):
     required_children = {

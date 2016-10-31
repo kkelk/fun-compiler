@@ -20,7 +20,7 @@ def check(module, expected_output, scope=None):
 
     module.emit(scope)
     try:
-        assert run(module.id.value) == str(expected_output)
+        assert run(module.id.value).lower() == str(expected_output).lower()
         subprocess.run('rm -f *.j *.class', shell=True)
     except:
         if DELETE_ON_FAIL:
@@ -46,15 +46,31 @@ def test_double():
     check(module, 36.0)
 
 def test_char():
-    scope = Scope()
-
     # module CharTest = 'a'
     module = Module(
             id=Identifier("CharTest"),
             expr=Char("a")
     )
     
-    check(module, 'a', scope)
+    check(module, 'a')
+
+def test_bool_true():
+    # module TrueTest = True
+    module = Module(
+            id=Identifier("TrueTest"),
+            expr=Bool("True")
+    )
+
+    check(module, True)
+
+def test_bool_false():
+    # module FalseTest = False
+    module = Module(
+            id=Identifier("FalseTest"),
+            expr=Bool("False")
+    )
+
+    check(module, False)
 
 def test_zero_args():
     scope = Scope()
@@ -290,3 +306,74 @@ def test_type_expression():
     )
 
     check(module, 11)
+
+def test_boolean_int():
+    # module BooleanIntTest = 3 == 2 + 1
+    module = Module(
+            id=Identifier("BooleanIntTest"),
+            expr=BinaryOperator(
+                expr1=Int(3),
+                op=Operator("=="),
+                expr2=BinaryOperator(
+                    expr1=Int(2),
+                    op=Operator("+"),
+                    expr2=Int(1)
+                )
+            )
+    )
+
+    check(module, True)
+
+def test_boolean_double():
+    # module BooleanDoubleTest = 2.0 + 1.5 < 10.5
+    module = Module(
+            id=Identifier("BooleanDoubleTest"),
+            expr=BinaryOperator(
+                expr1=BinaryOperator(
+                    expr1=Double(2.0),
+                    op=Operator("+"),
+                    expr2=Double(1.5)
+                ),
+                op=Operator("<"),
+                expr2=Double(10.5),
+            )
+    )
+
+    check(module, True)
+
+def test_boolean_lteq():
+    # module BooleanLessThanEqualToTest = 4 <= 3
+    module = Module(
+            id=Identifier("BooleanLessThanEqualToTest"),
+            expr=BinaryOperator(
+                expr1=Int(4),
+                op=Operator("<"),
+                expr2=Int(3)
+            )
+    )
+
+    check(module, False)
+
+def test_not_false():
+    # module NotTestFalse = not False
+    module = Module(
+            id=Identifier("NotTestFalse"),
+            expr=UnaryOperator(
+                expr=Bool("False"),
+                op=Operator("not")
+            )
+    )
+
+    check(module, True)
+
+def test_not_true():
+    # module NotTestTrue = not True
+    module = Module(
+            id=Identifier("NotTestTrue"),
+            expr=UnaryOperator(
+                expr=Bool("True"),
+                op=Operator("not")
+            )
+    )
+
+    check(module, False)
