@@ -37,6 +37,16 @@ def test_zero_args():
     module = Module(id=Identifier("zeroargstest"), expr=Identifier("x"), decls=[FunctionDeclaration(scope, id=Identifier("x"), expr=Int(3))]) # module bar = x where { x = 3 }
     check(module, 3, scope)
 
+def test_ord():
+    module = Module(id=Identifier("ordtest"), expr=UnaryOperator(expr=Char("a"), op=Operator("ord")))
+
+    check(module, 97)
+
+def test_chr():
+    module = Module(id=Identifier("chrtest"), expr=UnaryOperator(expr=Int(97), op=Operator("chr")))
+
+    check(module, "a")
+
 def test_character():
     scope = Scope()
 

@@ -26,6 +26,12 @@ def char_to_Character():
     invokestatic java/lang/Character.valueOf(C)Ljava/lang/Character;
     """
 
+def Character_to_char():
+    return """
+    checkcast java/lang/Character
+    invokevirtual java/lang/Character.charValue()C
+    """
+
 def print_string():
     return """
     getstatic java/lang/System/out Ljava/io/PrintStream;

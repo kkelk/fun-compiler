@@ -100,12 +100,33 @@ class Operator(ASTNode):
             '==': (NotImplemented, NotImplemented),
             'not': (NotImplemented, NotImplemented)
     }
+
     numeric_operators = {
-            '+': ('iadd', 'dadd'),
-            '*': ('imul', 'dmul'),
-            '-': ('isub', 'dsub'),
-            '/': ('idiv', 'ddiv')
+            '+': {
+                funtype.Int: 'iadd',
+                funtype.Double: 'dadd'
+            },
+            '*': {
+                funtype.Int: 'imul', 
+                funtype.Double: 'dmul'
+            },
+            '-': {
+                funtype.Int: 'isub',
+                funtype.Double: 'dsub'
+            },
+            '/': {
+                funtype.Int: 'idiv',
+                funtype.Double: 'ddiv'
+            },
+            'chr': {
+                funtype.Int: 'i2c' + util.char_to_Character(),
+                funtype.Double: 'd2i\ni2c' + util.char_to_Character()
+            },
+            'ord': {
+                funtype.Char: util.int_to_integer()
+            }
     }
+
     operators = {**boolean_operators, **numeric_operators}
 
     def __init__(self, value):
@@ -177,31 +198,37 @@ class Operator(ASTNode):
             
         return types
 
-    def emit(self, expr_type):
-        print("here!")
-        print(type(expr_type))
-        if isinstance(expr_type, funtype.Int):
-            print("branch1")
-            return """
-            {toint}
-            swap
-            {toint}
-            swap
-            {op}
-            {tointeger}
-            """.format(toint=util.integer_to_int(), op=self.operators[self.value][0], tointeger=util.int_to_integer())
+    def emit(self, expr_type, binary):
+        op = self.operators[self.value][type(expr_type)]
+
+        if binary:
+            if isinstance(expr_type, funtype.Int):
+                return """
+                {toint}
+                swap
+                {toint}
+                swap
+                {op}
+                {tointeger}
+                """.format(toint=util.integer_to_int(), op=op, tointeger=util.int_to_integer())
+            else:
+                return """
+                {todouble}
+                dup2_x1
+                pop2
+                {todouble}
+                dup2_x2
+                pop2
+                {op}
+                {toDouble}
+                """.format(todouble=util.Double_to_double(), op=op, toDouble=util.double_to_Double())
         else:
-            print("branch2")
-            return """
-            {todouble}
-            dup2_x1
-            pop2
-            {todouble}
-            dup2_x2
-            pop2
-            {op}
-            {toDouble}
-            """.format(todouble=util.Double_to_double(), op=self.operators[self.value][1], toDouble=util.double_to_Double())
+            conversion = {
+                funtype.Char: util.Character_to_char(),
+                funtype.Int: util.integer_to_int(),
+                funtype.Double: util.Double_to_double()
+            }
+            return conversion[type(expr_type)] + op
 
 class UnaryOperator(Expr):
     required_children = {
@@ -215,6 +242,12 @@ class UnaryOperator(Expr):
 
         return types
 
+    def _emit(self, scope):
+        return """
+        {expr}
+        {op}
+        """.format(expr=self.expr.emit(scope), op=self.op.emit(self.expr.get_type(scope), binary=False))
+
 class BinaryOperator(Expr):
     required_children = {
         'expr1': (Exactly(1), Expr),
@@ -223,13 +256,11 @@ class BinaryOperator(Expr):
     }
 
     def _emit(self, scope):
-        print("here4")
-        print(scope._identifiers)
         return """
         {expr1}
         {expr2}
         {op}
-        """.format(expr1=self.expr1.emit(scope), expr2=self.expr2.emit(scope), op=self.op.emit(self.expr1.get_type(scope)))
+        """.format(expr1=self.expr1.emit(scope), expr2=self.expr2.emit(scope), op=self.op.emit(self.expr1.get_type(scope), binary=True))
 
     def get_type(self, scope):
         return self.op.get_type(self.expr1.get_type(scope))
