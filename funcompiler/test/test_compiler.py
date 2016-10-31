@@ -202,7 +202,7 @@ def test_one_arg():
 def test_two_args():
     scope = Scope()
 
-    # module TwoArgTest = mul 2 5 where { mul x y = x * y }
+    # module TwoArgTest = mul 2.0 5.0 where { mul x y = x * y }
     module = Module(
             id=Identifier("TwoArgTest"),
             expr=FunctionApplication(
@@ -224,7 +224,155 @@ def test_two_args():
             )]
     )
 
-    check(module, 10, scope)
+    check(module, 10.0, scope)
+
+"""
+def test_three_args():
+    scope = Scope()
+
+    # module ThreeArgTest = add 1 2 3 where { add x y z = x + y + z }
+    module = Module(
+            id=Identifier("ThreeArgTest"),
+            expr=FunctionApplication(
+                func=FunctionApplication(
+                    func=FunctionApplication(
+                        func=Identifier("add"),
+                        expr=Int(1)
+                    ),
+                    expr=Int(2)
+                ),
+                expr=Int(3)
+            ),
+            decls=[FunctionDeclaration(
+                scope,
+                id=Identifier("add"),
+                params=[Identifier("x"), Identifier("y"), Identifier("z")],
+                expr=BinaryOperator(
+                    expr1=BinaryOperator(
+                        expr1=Identifier("x"),
+                        op=Operator("+"),
+                        expr2=Identifier("y")
+                    ),
+                    op=Operator("+"),
+                    expr2=Identifier("z")
+                )
+            ),
+            TypeDeclaration(
+                scope,
+                id=Identifier("add"),
+                type=FunctionType(
+                    param_type=NamedType(id=Identifier("Int")),
+                    return_type=FunctionType(
+                        param_type=NamedType(id=Identifier("Int")),
+                        return_type=NamedType(id=Identifier("Int"))
+                    )
+                )
+            )]
+    )
+
+    check(module, 6, scope)
+"""
+
+def test_three_args():
+    scope = Scope()
+
+    # module ThreeArgTest = add 1 2 3 where { add x y z = x + y + z }
+    module = Module(
+            id=Identifier("ThreeArgTest"),
+            expr=FunctionApplication(
+                func=FunctionApplication(
+                    func=FunctionApplication(
+                        func=Identifier("add"),
+                        expr=Double(1)
+                    ),
+                    expr=Double(2)
+                ),
+                expr=Double(3)
+            ),
+            decls=[FunctionDeclaration(
+                scope,
+                id=Identifier("add"),
+                params=[Identifier("x"), Identifier("y"), Identifier("z")],
+                expr=BinaryOperator(
+                    expr1=BinaryOperator(
+                        expr1=Identifier("x"),
+                        op=Operator("+"),
+                        expr2=Identifier("y")
+                    ),
+                    op=Operator("+"),
+                    expr2=Identifier("z")
+                )
+            )]
+    )
+
+    check(module, 6.0, scope)
+
+"""
+def test_first_class_functions():
+    scope = Scope()
+
+    # module FirstClassFunctionTest = increment (add 1) 2 where { increment adder x = adder x ; add x y = x + y }
+    module = Module(
+            id=Identifier("FirstClassFunctionTest"),
+            expr=FunctionApplication(
+                func=FunctionApplication(
+                    func=Identifier("increment"),
+                    expr=FunctionApplication(
+                        func=Identifier("add"),
+                        expr=Int(1)
+                    )
+                ),
+                expr=Int(2)
+            ),
+            decls=[
+                FunctionDeclaration(
+                    scope,
+                    id=Identifier("increment"),
+                    params=[Identifier("adder"), Identifier("x")],
+                    expr=FunctionApplication(
+                        func=Identifier("adder"),
+                        expr=Identifier("x")
+                    )
+                ),
+                FunctionDeclaration(
+                    scope,
+                    id=Identifier("add"),
+                    params=[Identifier("x"), Identifier("y")],
+                    expr=BinaryOperator(
+                        expr1=Identifier("x"),
+                        op=Operator("+"),
+                        expr2=Identifier("y")
+                    )
+                )
+            ]
+    )
+
+    check(module, 3, scope)
+"""
+
+def test_partial_application():
+    scope = Scope()
+
+    # module PartialApplicationTest = add 3 where { add x y = x + y }
+    module = Module(
+            id=Identifier("PartialApplicationTest"),
+            expr=FunctionApplication(
+                func=Identifier("add"),
+                expr=Int(3)
+            ),
+            decls=[FunctionDeclaration(
+                scope,
+                id=Identifier("add"),
+                params=[Identifier("x"), Identifier("y")],
+                expr=BinaryOperator(
+                    expr1=Identifier("x"),
+                    op=Operator("+"),
+                    expr2=Identifier("y")
+                )
+            )]
+    )
+
+    check(module, 'addFunction with bound parameters: (3)', scope)
 
 def test_lists():
     # module ListTest = [5, 10]
@@ -377,3 +525,65 @@ def test_not_true():
     )
 
     check(module, False)
+
+def test_data_constructor():
+    scope = Scope()
+
+    # module DataConstructorTest = Foo where { data Bar = Foo; }
+    module = Module(
+            id=Identifier("DataConstructorTest"),
+            expr=Constr(id=Identifier("Foo")),
+            decls=[DataTypeDeclaration(
+                scope,
+                id=Identifier("Bar"),
+                constrs=[Constr(id=Identifier("Foo"))]
+            )]
+    )
+
+    check(module, "Foo", scope)
+
+def test_data_equality():
+    scope = Scope()
+
+    # module DataEqualityTest = X == X where { data T = X | Y; }
+    module = Module(
+            id=Identifier("DataEqualityTest"),
+            expr=BinaryOperator(
+                expr1=Constr(id=Identifier("X")),
+                op=Operator("=="),
+                expr2=Constr(id=Identifier("X"))
+            ),
+            decls=[DataTypeDeclaration(
+                scope,
+                id=Identifier("T"),
+                constrs=[
+                    Constr(id=Identifier("X")),
+                    Constr(id=Identifier("Y"))
+                ]
+            )]
+    )
+
+    check(module, True, scope)
+
+def test_data_inequality():
+    scope = Scope()
+
+    # module DataEqualityTest = X == Y where { data T = X | Y; }
+    module = Module(
+            id=Identifier("DataInequalityTest"),
+            expr=BinaryOperator(
+                expr1=Constr(id=Identifier("X")),
+                op=Operator("=="),
+                expr2=Constr(id=Identifier("Y"))
+            ),
+            decls=[DataTypeDeclaration(
+                scope,
+                id=Identifier("T"),
+                constrs=[
+                    Constr(id=Identifier("X")),
+                    Constr(id=Identifier("Y"))
+                ]
+            )]
+    )
+
+    check(module, False, scope)

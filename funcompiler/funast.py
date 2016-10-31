@@ -6,12 +6,13 @@ class Scope:
         self._identifiers = {}
         self._label = 0
         self._types = {}
+        self._stack = 0
 
     def get_identifier(self, identifier):
-        return self._identifiers[identifier]
+        return self._identifiers[identifier][0]
 
-    def add_identifier(self, identifier, value):
-        self._identifiers[identifier] = value
+    def add_identifier(self, identifier, value, words=0):
+        self._identifiers[identifier] = (value, words)
 
     def add_identifier_type(self, identifier, typ):
         if identifier not in self._types or self._types[identifier][1] == False:
@@ -22,6 +23,19 @@ class Scope:
 
     def get_identifier_type(self, identifier):
         return self._types[identifier][0]
+
+    def allocate_stack(self, words):
+        self._stack += words
+
+    def get_allocate_identifier(self, identifier):
+        val, stack_words = self._identifiers[identifier]
+        self._stack += stack_words
+        return val
+
+    def get_reset_stack(self):
+        val = self._stack
+        self._stack = 0
+        return val
 
     @property
     def label(self):

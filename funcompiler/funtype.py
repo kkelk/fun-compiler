@@ -1,5 +1,7 @@
 from functools import total_ordering
 
+import funcompiler.expression
+
 @total_ordering
 class Type:
     jvm_code = NotImplemented
@@ -43,6 +45,16 @@ class Char(Type):
     jvm_code = 'C'
     wideness = 5
 
+class Data(Type):
+    wideness = 5
+
+    def __init__(self, identifier):
+        self._identifier = identifier
+
+    @property
+    def identifier(self):
+        return self._identifier
+
 class List(Type):
     wideness = 5
 
@@ -79,8 +91,9 @@ class Function(Type):
     def __str__(self):
         return ' -> '.join(map(str, self._progression))
 
-    def apply(self, typ):
-        assert isinstance(self._progression[0], GenericType) or isinstance(typ, self._progression[0].__class__)
+    def apply(self, typ=None):
+        if typ:
+            assert isinstance(self._progression[0], GenericType) or isinstance(typ, self._progression[0].__class__)
         
         if len(self._progression) == 2:
             return self._progression[1]

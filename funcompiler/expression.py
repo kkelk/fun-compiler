@@ -56,7 +56,7 @@ class Identifier(Expr):
         self._value = value
 
     def _emit(self, scope):
-        return scope.get_identifier(self.value)
+        return scope.get_allocate_identifier(self.value)
 
     def __eq__(self, other):
         return self.value == other.value
@@ -148,6 +148,11 @@ class Operator(ASTNode):
                    invokevirtual java/lang/Double.compareTo(Ljava/lang/Double;)I
                    ifeq true_return
                    goto false_return
+                   ''',
+                   funtype.Data: '''
+                   invokevirtual java/lang/Object.equals(Ljava/lang/Object;)Z
+                   ifeq false_return
+                   goto true_return
                    '''
                    },
             'not': {funtype.Bool: '''
@@ -255,7 +260,7 @@ class Operator(ASTNode):
             
         return types
 
-    def emit(self, expr_type, binary):
+    def emit(self, expr_type, binary, scope):
         op = self.operators[self.value][type(expr_type)]
 
         if self.value in self.numeric_operators:
@@ -270,6 +275,7 @@ class Operator(ASTNode):
                     {tointeger}
                     """.format(toint=util.integer_to_int(), op=op, tointeger=util.int_to_integer())
                 else:
+                    scope.allocate_stack(2)
                     return """
                     {todouble}
                     dup2_x1
@@ -288,7 +294,6 @@ class Operator(ASTNode):
                 }
                 return conversion[type(expr_type)] + op
         else:
-            print(op)
             return """
             {comparison}
             true_return:
@@ -319,7 +324,7 @@ class UnaryOperator(Expr):
         return """
         {expr}
         {op}
-        """.format(expr=self.expr.emit(scope), op=self.op.emit(self.expr.get_type(scope), binary=False))
+        """.format(expr=self.expr.emit(scope), op=self.op.emit(self.expr.get_type(scope), False, scope))
 
     def get_type(self, scope):
         return self.op.get_type(self.expr.get_type(scope))
@@ -336,7 +341,7 @@ class BinaryOperator(Expr):
         {expr1}
         {expr2}
         {op}
-        """.format(expr1=self.expr1.emit(scope), expr2=self.expr2.emit(scope), op=self.op.emit(self.expr1.get_type(scope), binary=True))
+        """.format(expr1=self.expr1.emit(scope), expr2=self.expr2.emit(scope), op=self.op.emit(self.expr1.get_type(scope), True, scope))
 
     def get_type(self, scope):
         return self.op.get_type(self.expr1.get_type(scope))
@@ -370,6 +375,7 @@ class Lists(Expr):
         return types
 
     def _emit(self, scope):
+        scope.allocate_stack(4)
         return_str = """
         new java/util/LinkedList
         dup
@@ -408,6 +414,7 @@ class TypeSpecification(Expr):
 class Int(Terminal):
     make_fn = int
     def _emit(self, scope):
+        scope.allocate_stack(1)
         return 'ldc {}'.format(self.value) + util.int_to_integer()
 
     def get_type(self, scope):
@@ -420,6 +427,7 @@ class Double(Terminal):
         return funtype.Double()
 
     def _emit(self, scope):
+        scope.allocate_stack(2)
         return 'ldc2_w {}'.format(self.value) + util.double_to_Double()
 
 class Char(Terminal):
@@ -430,6 +438,7 @@ class Char(Terminal):
         return funtype.Char()
 
     def _emit(self, scope):
+        scope.allocate_stack(1)
         return 'bipush {}'.format(ord(self.value)) + util.char_to_Character()
 
 class Constr(Expr):
@@ -437,10 +446,12 @@ class Constr(Expr):
         'id': (Exactly(1), Identifier)
     }
 
-class Constrs(ASTNode):
-    required_children = {
-        'constrs': (GreaterOrEqual(1))
-    }
+    def _emit(self, scope):
+        scope.allocate_stack(1)
+        return scope.get_identifier(self.id.value)
+
+    def get_type(self, scope):
+        return scope.get_identifier_type(self.id.value)
 
 class Bool(Terminal):
     values = ('True', 'False')
@@ -450,6 +461,7 @@ class Bool(Terminal):
         return funtype.Bool()
 
     def _emit(self, scope):
+        scope.allocate_stack(1)
         val = 1 if self.value == 'True' else 0
         return '''
         iconst_{val}
@@ -463,6 +475,7 @@ class FunctionApplication(Expr):
     }
 
     def _emit(self, scope):
+        scope.allocate_stack(1)
         return """
         {func}
         checkcast AbstractFunction

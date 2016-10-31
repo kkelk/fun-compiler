@@ -23,22 +23,27 @@ class Module(ASTNode):
         .super java/lang/Object
 
         .method public static module()Ljava/lang/Object;
-            .limit stack 10
             {decls}
             {expr}
             areturn
+            .limit stack {stacklimit}
         .end method
 
         .method public static main([Ljava/lang/String;)V
-            .limit stack 10
             getstatic java/lang/System/out Ljava/io/PrintStream;
             invokestatic {name}.module()Ljava/lang/Object;
             invokevirtual java/io/PrintStream/println(Ljava/lang/Object;)V
+            .limit stack 2
             return
         .end method
         """
 
-        return return_str.format(name=self.id.value, conversion=util.integer_to_int(), decls='\n'.join(map(lambda x: x.emit(scope), self.decls)), expr=self.expr.emit(scope))
+        decls = '\n'.join(map(lambda x: x.emit(scope), self.decls))
+        expr = self.expr.emit(scope)
+
+        stacklimit = scope.get_reset_stack()
+        
+        return return_str.format(name=self.id.value, conversion=util.integer_to_int(), decls=decls, expr=expr, stacklimit=stacklimit)
 
     def emit(self, scope=Scope()):
         super().emit(scope)
