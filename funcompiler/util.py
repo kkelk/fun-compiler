@@ -7,20 +7,12 @@ def integer_to_int():
 
 def int_to_integer():
     return """
-    new java/lang/Integer
-    dup_x1
-    dup_x2
-    pop
-    invokespecial java/lang/Integer.<init>(I)V
+    invokestatic java/lang/Integer.valueOf(I)Ljava/lang/Integer;
     """
 
 def double_to_Double():
     return """
-    new java/lang/Double
-    dup_x1
-    dup_x2
-    pop
-    invokespecial java/lang/Double.<init>(D)V
+    invokestatic java/lang/Double.valueOf(D)Ljava/lang/Double;
     """
 
 def Double_to_double():

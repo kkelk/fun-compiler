@@ -69,7 +69,7 @@ class Identifier(Expr):
         return self._value
 
     def get_type(self, scope):
-        return scope.get_type(self.value)
+        return scope.get_identifier_type(self.value)
 
 class Type(ASTNode):
     pass
@@ -93,18 +93,20 @@ class FunctionType(Type):
 class Operator(ASTNode):
     _children = {}
 
-    operators = {
-            '+': 'iadd',
-            '*': 'imul',
-            '-': 'isub',
-            '/': 'idiv',
-            '<': NotImplemented,
-            '<=': NotImplemented,
-            '==': NotImplemented,
-            'ord': NotImplemented,
-            'chr': NotImplemented,
-            'not': NotImplemented
+    # Mapping from operators to (integer, double) bytecode versions
+    boolean_operators = {
+            '<': (NotImplemented, NotImplemented),
+            '<=': (NotImplemented, NotImplemented),
+            '==': (NotImplemented, NotImplemented),
+            'not': (NotImplemented, NotImplemented)
     }
+    numeric_operators = {
+            '+': ('iadd', 'dadd'),
+            '*': ('imul', 'dmul'),
+            '-': ('isub', 'dsub'),
+            '/': ('idiv', 'ddiv')
+    }
+    operators = {**boolean_operators, **numeric_operators}
 
     def __init__(self, value):
         if value in self.operators:
@@ -123,9 +125,9 @@ class Operator(ASTNode):
         return hash(self.value)
 
     def get_type(self, expr1_type):
-        if self.value in ('+', '*', '-', '/'):
+        if self.value in numeric_operators:
             return expr1_type
-        elif self.value in ('<', '<=', '==', 'not'):
+        elif self.value in boolean_operators:
             return funtype.Bool()
         elif self.value == 'ord':
             return funtype.Int()
@@ -175,15 +177,28 @@ class Operator(ASTNode):
             
         return types
 
-    def _emit(self, scope):
-        return """
-        {toint}
-        swap
-        {toint}
-        swap
-        {op}
-        {tointeger}
-        """.format(toint=util.integer_to_int(), op=self.operators[self.value], tointeger=util.int_to_integer())
+    def emit(self, expr_type):
+        print(expr_type)
+        if isinstance(expr_type, funtype.Int):
+            return """
+            {toint}
+            swap
+            {toint}
+            swap
+            {op}
+            {tointeger}
+            """.format(toint=util.integer_to_int(), op=self.operators[self.value][0], tointeger=util.int_to_integer())
+        else:
+            return """
+            {todouble}
+            dup2_x1
+            pop2
+            {todouble}
+            dup2_x2
+            pop2
+            {op}
+            {toDouble}
+            """.format(todouble=util.Double_to_double(), op=self.operators[self.value][1], toDouble=util.double_to_Double())
 
 class UnaryOperator(Expr):
     required_children = {
@@ -211,7 +226,7 @@ class BinaryOperator(Expr):
         {expr1}
         {expr2}
         {op}
-        """.format(expr1=self.expr1.emit(scope), expr2=self.expr2.emit(scope), op=self.op.emit(scope))
+        """.format(expr1=self.expr1.emit(scope), expr2=self.expr2.emit(scope), op=self.op.emit(self.expr1.get_type(scope)))
 
     def get_type(self, scope):
         return self.op.get_type(self.expr1.get_type(scope))

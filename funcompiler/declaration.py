@@ -172,6 +172,7 @@ class FunctionDeclaration(Declaration):
                 '''.format(name=self.id.value, i=i))
 
             print(list(map(lambda x: x.value, self.params)))
+            function_scope.add_identifier_type(self.params[-1].value, scope.get_identifier_type(self.id.value).progression[-2])
             function_scope.add_identifier(self.params[-1].value, 'aload_1')
             print(function_scope._identifiers)
 
