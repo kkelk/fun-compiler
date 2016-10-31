@@ -21,6 +21,11 @@ def Double_to_double():
     invokevirtual java/lang/Double.doubleValue()D
     """
 
+def char_to_Character():
+    return """
+    invokestatic java/lang/Character.valueOf(C)Ljava/lang/Character;
+    """
+
 def print_string():
     return """
     getstatic java/lang/System/out Ljava/io/PrintStream;

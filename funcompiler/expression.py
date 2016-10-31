@@ -289,10 +289,14 @@ class Double(Terminal):
         return 'ldc2_w {}'.format(self.value) + util.double_to_Double()
 
 class Char(Terminal):
+    make_fn = lambda self, x: x
     values = tuple(string.printable)
 
     def get_type(self, scope):
         return funtype.Char()
+
+    def _emit(self, scope):
+        return 'bipush {}'.format(ord(self.value)) + util.char_to_Character()
 
 class Constr(Expr):
     required_children = {

@@ -37,16 +37,27 @@ def test_zero_args():
     module = Module(id=Identifier("zeroargstest"), expr=Identifier("x"), decls=[FunctionDeclaration(scope, id=Identifier("x"), expr=Int(3))]) # module bar = x where { x = 3 }
     check(module, 3, scope)
 
+def test_character():
+    scope = Scope()
+
+    module = Module(id=Identifier("chartest"), expr=Char("a"))
+    check(module, 'a', scope)
+
+def test_character_function():
+    scope = Scope()
+
+    module = Module(id=Identifier("charfunctest"), expr=Identifier("c"), decls=[FunctionDeclaration(scope, id=Identifier("c"), expr=Char("c"))])
+
 def test_int_operators():
     scope = Scope()
 
-    module = Module(id=Identifier("operatorstest"), expr=BinaryOperator(expr1=Identifier("x"), op=Operator("+"), expr2=Int(1)), decls=[FunctionDeclaration(scope, id=Identifier("x"), expr=BinaryOperator(expr1=Int(3), op=Operator("*"), expr2=Int(2)))]) # module bar = x + 1 where { x = 3 * 2 }
+    module = Module(id=Identifier("intoperatorstest"), expr=BinaryOperator(expr1=Identifier("x"), op=Operator("+"), expr2=Int(1)), decls=[FunctionDeclaration(scope, id=Identifier("x"), expr=BinaryOperator(expr1=Int(3), op=Operator("*"), expr2=Int(2)))]) # module bar = x + 1 where { x = 3 * 2 }
     check(module, 7, scope)
 
 def test_double_operators():
     scope = Scope()
 
-    module = Module(id=Identifier("operatorstest"), expr=BinaryOperator(expr1=Identifier("x"), op=Operator("+"), expr2=Double(1)), decls=[FunctionDeclaration(scope, id=Identifier("x"), expr=BinaryOperator(expr1=Double(3), op=Operator("*"), expr2=Double(2)))]) # module bar = x + 1 where { x = 3 * 2 }
+    module = Module(id=Identifier("doubleoperatorstest"), expr=BinaryOperator(expr1=Identifier("x"), op=Operator("+"), expr2=Double(1)), decls=[FunctionDeclaration(scope, id=Identifier("x"), expr=BinaryOperator(expr1=Double(3), op=Operator("*"), expr2=Double(2)))]) # module bar = x + 1 where { x = 3 * 2 }
     check(module, 7.0, scope)
 
 def test_one_arg():
