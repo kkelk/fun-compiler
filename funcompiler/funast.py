@@ -5,7 +5,7 @@ class Scope:
     def __init__(self):
         self._identifiers = {}
         self._label = 0
-        self._function_types = {}
+        self._types = {}
 
     def get_identifier(self, identifier):
         return self._identifiers[identifier]
@@ -13,11 +13,12 @@ class Scope:
     def add_identifier(self, identifier, value):
         self._identifiers[identifier] = value
 
-    def add_function(self, fn_id, fn_type):
-        self._function_types[fn_id] = fn_type
+    def add_identifier_type(self, identifier, typ):
+        self._types[identifier] = typ
 
-    def get_function_type(self, fn_id):
-        return self._function_types[fn_id]
+    def get_identifier_type(self, identifier):
+        print(self._types)
+        return self._types[identifier]
 
     @property
     def label(self):

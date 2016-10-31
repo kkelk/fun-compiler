@@ -6,10 +6,10 @@ from funcompiler import funtype
 from funcompiler import util
 
 class Expr(ASTNode):
-    def get_type(self):
+    def get_type(self, scope):
         raise NotImplementedError
 
-    def infer_types(self, types):
+    def infer_types(self, types, scope):
         """Modify the *types* dictionary to narrow down the possible types of parameters.
         This default implementation can gain no additional information, so just returns what was given."""
         return types
@@ -32,11 +32,11 @@ class Terminal(Expr):
     def value(self):
         return self._value
 
-    def get_type(self):
+    def get_type(self, scope):
         raise NotImplementedError
 
-    def infer_types(self, types):
-        types[self] = self.get_type()
+    def infer_types(self, types, scope):
+        types[self] = self.get_type(scope)
         return types
 
     def __eq__(self, other):
@@ -67,6 +67,9 @@ class Identifier(Expr):
     @property
     def value(self):
         return self._value
+
+    def get_type(self, scope):
+        return scope.get_type(self.value)
 
 class Type(ASTNode):
     pass
@@ -137,7 +140,7 @@ class Operator(ASTNode):
         else:
             raise AssertionError
 
-    def infer_unary(self, expr, types):
+    def infer_unary(self, expr, types, scope):
         self_mapping = {
             'ord': funtype.Int(),
             'chr': funtype.Char(),
@@ -152,11 +155,11 @@ class Operator(ASTNode):
        
         types[self] = self_mapping[self.value]
         types[expr] = expr_mapping[self.value]
-        expr.infer_types(types)
+        expr.infer_types(types, scope)
 
-    def infer_binary(self, expr1, expr2, types):
-        expr1.infer_types(types)
-        expr2.infer_types(types)
+    def infer_binary(self, expr1, expr2, types, scope):
+        expr1.infer_types(types, scope)
+        expr2.infer_types(types, scope)
 
         if self.value in ('<', '<=', '=='):
             types[self] = funtype.Bool()
@@ -188,7 +191,7 @@ class UnaryOperator(Expr):
         'expr': (Exactly(1), Expr)
     }
 
-    def infer_types(self, types):
+    def infer_types(self, types, scope):
         self.op.infer_unary(self.expr, types)
         types[self] = types[self.op]
 
@@ -210,11 +213,11 @@ class BinaryOperator(Expr):
         {op}
         """.format(expr1=self.expr1.emit(scope), expr2=self.expr2.emit(scope), op=self.op.emit(scope))
 
-    def get_type(self):
-        return self.op.get_type(self.expr1.get_type())
+    def get_type(self, scope):
+        return self.op.get_type(self.expr1.get_type(scope))
 
-    def infer_types(self, types):
-        self.op.infer_binary(self.expr1, self.expr2, types)
+    def infer_types(self, types, scope):
+        self.op.infer_binary(self.expr1, self.expr2, types, scope)
         types[self] = types[self.op]
 
         return types
@@ -231,7 +234,7 @@ class Lists(Expr):
             elif expr not in types or types[expr] > typ:
                 types[expr] = typ
 
-    def infer_types(self, types):
+    def infer_types(self, types, scope):
         for expr in exprs:
             if expr in types:
                 self._narrow_types(types, types[expr])
@@ -255,13 +258,13 @@ class Int(Terminal):
     def _emit(self, scope):
         return 'ldc {}'.format(self.value) + util.int_to_integer()
 
-    def get_type(self):
+    def get_type(self, scope):
         return funtype.Int()
 
 class Double(Terminal):
     make_fn = float
 
-    def get_type(self):
+    def get_type(self, scope):
         return funtype.Double()
 
     def _emit(self, scope):
@@ -270,7 +273,7 @@ class Double(Terminal):
 class Char(Terminal):
     values = tuple(string.printable)
 
-    def get_type(self):
+    def get_type(self, scope):
         return funtype.Char()
 
 class Constr(Expr):
@@ -286,7 +289,7 @@ class Constrs(ASTNode):
 class Bool(Terminal):
     values = ('True', 'False')
 
-    def get_type(self):
+    def get_type(self, scope):
         return funtype.Bool()
 
 class FunctionApplication(Expr):
@@ -302,7 +305,7 @@ class FunctionApplication(Expr):
         dup
         {expr}
         invokevirtual AbstractFunction.apply(Ljava/lang/Object;)Ljava/lang/Object;
-        """.format(func=self.func.emit(scope), expr=self.expr.emit(scope), expr_type=self.expr.get_type().jvm_code, label=scope.label)
+        """.format(func=self.func.emit(scope), expr=self.expr.emit(scope))
         
-    def get_type(self):
-        return self.func.get_type().apply(self.expr.get_type())
+    def get_type(self, scope):
+        return self.func.get_type(scope).apply(self.expr.get_type(scope))

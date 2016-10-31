@@ -14,6 +14,10 @@ class Type:
     def __eq__(self, other):
         return self.wideness == other.wideness
 
+    @property
+    def progression(self):
+        return [self]
+
 class GenericType(Type):
     wideness = 10
 
@@ -74,15 +78,19 @@ class Function(Type):
             return Function(self._progression[1:-1], self._progression[-1])
 
     @classmethod
-    def infer_types(cls, args, expr):
+    def infer_types(cls, args, expr, scope):
         # To start, we assume that each of the arguments can be of any type.
         types = _ChangeTrackingDict()
         for i, arg in enumerate(args):
             types[arg] = GenericType(i)
 
-        expr.infer_types(types)
+        expr.infer_types(types, scope)
         while types.modified:
             types.reset()
-            expr.infer_types(types)
+            expr.infer_types(types, scope)
 
         return types
+
+    @property
+    def progression(self):
+        return self._progression

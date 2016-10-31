@@ -3,6 +3,7 @@ from funcompiler.childcount import Exactly, GreaterOrEqual
 from funcompiler.expression import Identifier, Expr, Constrs, Type
 
 from funcompiler.funtype import Function
+from funcompiler import util
 
 from copy import deepcopy
 
@@ -20,13 +21,16 @@ class FunctionDeclaration(Declaration):
     def __init__(self, scope, *args, **kwargs):
         super().__init__(scope, *args, **kwargs)
 
-        types = Function.infer_types(self.params, self.expr)
+        types = Function.infer_types(self.params, self.expr, scope)
         
         param_types = []
         for param in self.params:
             param_types.append(types[param])
 
-        scope.add_function(self.id, Function(param_types, types[self.expr]))
+        fun_type = Function(param_types, types[self.expr])
+
+        scope.add_identifier_type(self.id.value, fun_type)
+        scope.add_identifier(self.id.value, fun_type)
 
     def _emit(self, scope):
         if self.params:
@@ -57,6 +61,46 @@ class FunctionDeclaration(Declaration):
                 return
             .end method"""
 
+            # TOSTRING
+            return_str += """
+            .method public toString()Ljava/lang/String;
+            .limit stack 4
+            .limit locals 2
+
+            {create}
+            ldc "{name}Function with bound parameters: "
+            {append}
+            """.format(name=self.id.value, create=util.create_stringbuilder(), append=util.add_to_stringbuilder())
+            
+            for param_num in range(len(self.params[:-1])):
+                return_str += """
+                aload_0
+                getfield {name}Function.param_{param_num} Ljava/lang/Object;
+                dup
+                ifnull skip{param_num}
+                
+                ldc "("
+                {append}
+                invokevirtual java/lang/Object.toString()Ljava/lang/String;
+                {append}
+                ldc ") "
+                {append}
+                goto after{param_num}
+
+                skip{param_num}:
+                pop
+                after{param_num}:
+
+                """.format(param_num=param_num, name=self.id.value, append=util.add_to_stringbuilder())
+
+            return_str += """
+            aload_1
+            invokevirtual java/lang/Object.toString()Ljava/lang/String;
+            areturn
+            .end method
+            """
+            # END TOSTRING
+
             for param_num in range(len(self.params[:-1])):
                 return_str += """
                 .method public set_{param_num}(Ljava/lang/Object;)V
@@ -71,7 +115,7 @@ class FunctionDeclaration(Declaration):
                     aload_0
                     swap
                     putfield AbstractFunction.param_number I
-                    
+
                     ; And decrement the remaining_params, so we know when we're done.
                     aload_0
                     getfield AbstractFunction.remaining_params I
@@ -121,6 +165,7 @@ class FunctionDeclaration(Declaration):
             function_scope = deepcopy(scope)
 
             for i, param in enumerate(self.params[:-1]):
+                function_scope.add_identifier_type(param.value, scope.get_identifier_type(self.id.value).progression[i])
                 function_scope.add_identifier(param.value, '''
                 aload_0
                 getfield {name}Function.param_{i} Ljava/lang/Object;
@@ -176,6 +221,7 @@ class FunctionDeclaration(Declaration):
 
             return return_str.format(name=self.id.value, param_count=len(self.params))
         else:
+            print(self.id.value)
             scope.add_identifier('{}'.format(self.id.value), self.expr.emit(scope))
             return ''
 

@@ -28,3 +28,27 @@ def Double_to_double():
     checkcast java/lang/Double
     invokevirtual java/lang/Double.doubleValue()D
     """
+
+def print_string():
+    return """
+    getstatic java/lang/System/out Ljava/io/PrintStream;
+    swap
+    invokevirtual java/io/PrintStream/print(Ljava/lang/String;)V
+    """
+
+def create_stringbuilder():
+    return """
+    new java/lang/StringBuilder
+    dup
+    invokespecial java/lang/StringBuilder.<init>()V
+    astore_1
+    """
+
+def add_to_stringbuilder():
+    """Assumes it can use aload_1 to store it, and the top of the stack is the thing to add."""
+    return """
+    aload_1
+    swap
+    invokevirtual java/lang/StringBuilder.append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    astore_1
+    """
