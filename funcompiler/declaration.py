@@ -222,8 +222,8 @@ class FunctionDeclaration(Declaration):
 
             return return_str.format(name=self.id.value, param_count=len(self.params))
         else:
-            print(self.id.value)
             scope.add_identifier('{}'.format(self.id.value), self.expr.emit(scope))
+            scope.add_identifier_type('{}'.format(self.id.value), self.expr.get_type(scope))
             return ''
 
     def _emit_target(self):

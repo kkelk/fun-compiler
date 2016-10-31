@@ -17,7 +17,6 @@ class Scope:
         self._types[identifier] = typ
 
     def get_identifier_type(self, identifier):
-        print(self._types)
         return self._types[identifier]
 
     @property

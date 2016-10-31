@@ -125,9 +125,9 @@ class Operator(ASTNode):
         return hash(self.value)
 
     def get_type(self, expr1_type):
-        if self.value in numeric_operators:
+        if self.value in self.numeric_operators:
             return expr1_type
-        elif self.value in boolean_operators:
+        elif self.value in self.boolean_operators:
             return funtype.Bool()
         elif self.value == 'ord':
             return funtype.Int()
@@ -178,8 +178,10 @@ class Operator(ASTNode):
         return types
 
     def emit(self, expr_type):
-        print(expr_type)
+        print("here!")
+        print(type(expr_type))
         if isinstance(expr_type, funtype.Int):
+            print("branch1")
             return """
             {toint}
             swap
@@ -189,6 +191,7 @@ class Operator(ASTNode):
             {tointeger}
             """.format(toint=util.integer_to_int(), op=self.operators[self.value][0], tointeger=util.int_to_integer())
         else:
+            print("branch2")
             return """
             {todouble}
             dup2_x1
