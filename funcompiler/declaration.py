@@ -244,3 +244,7 @@ class TypeDeclaration(Declaration):
         'id': (Exactly(1), Identifier),
         'type': (Exactly(1), Type)
     }
+
+    def _emit(self, scope):
+        scope.set_definite_identifier_type(self.id.value, self.type.to_funtype())
+        return ''

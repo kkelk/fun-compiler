@@ -14,10 +14,14 @@ class Scope:
         self._identifiers[identifier] = value
 
     def add_identifier_type(self, identifier, typ):
-        self._types[identifier] = typ
+        if identifier not in self._types or self._types[identifier][1] == False:
+            self._types[identifier] = (typ, False)
+
+    def set_definite_identifier_type(self, identifier, typ):
+        self._types[identifier] = (typ, True)
 
     def get_identifier_type(self, identifier):
-        return self._types[identifier]
+        return self._types[identifier][0]
 
     @property
     def label(self):

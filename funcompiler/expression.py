@@ -72,12 +72,30 @@ class Identifier(Expr):
         return scope.get_identifier_type(self.value)
 
 class Type(ASTNode):
-    pass
+    def to_funtype(self):
+        raise NotImplementedError
+
+    @property
+    def value(self):
+        return self._value
 
 class NamedType(Type):
     required_children = {
         'id': (Exactly(1), Identifier)
     }
+
+    named_types = {
+            'Int': funtype.Int,
+            'Double': funtype.Double,
+            'Char': funtype.Char
+    }
+
+    def to_funtype(self):
+        return self.named_types[self.id.value]
+
+    @property
+    def value(self):
+        return self._value
 
 class ListType(Type):
     required_children = {
@@ -89,6 +107,9 @@ class FunctionType(Type):
         'param_type': (Exactly(1), Type),
         'return_type': (Exactly(1), Type)
     }
+
+    def to_funtype(self):
+        return funtype.Function([self.param_type.to_funtype()], [self.return_type.to_funtype()])
 
 class Operator(ASTNode):
     _children = {}
@@ -324,6 +345,12 @@ class TypeSpecification(Expr):
         'expr': (Exactly(1), Expr),
         'type': (Exactly(1), Type)
     }
+
+    def _emit(self, scope):
+        return self.expr.emit(scope)
+
+    def get_type(self):
+        return self.type.to_funtype()
 
 
 class Int(Terminal):

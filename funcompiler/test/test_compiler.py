@@ -245,3 +245,48 @@ def test_list_function():
     )
 
     check(module, [3, 4], scope)
+
+def test_function_type_spec():
+    scope = Scope()
+
+    # module FunctionTypeSpecTest = getint 3 where { getint x = x; getint :: Int }
+    module = Module(
+            id=Identifier("FunctionTypeSpecTest"),
+            expr=FunctionApplication(
+                func=Identifier("getint"),
+                expr=Int(3)
+            ),
+            decls=[
+                FunctionDeclaration(
+                    scope,
+                    id=Identifier("getint"),
+                    params=[Identifier("x")],
+                    expr=Identifier("x")),
+                TypeDeclaration(
+                    scope,
+                    id=Identifier("getint"),
+                    type=FunctionType(
+                        param_type=NamedType(id=Identifier("Int")),
+                        return_type=NamedType(id=Identifier("Int"))
+                    )
+                )
+            ]
+    )
+
+    check(module, 3, scope)
+
+def test_type_expression():
+    # module TypeExpressionTest = 2 + 9 :: Int
+    module = Module(
+            id=Identifier("TypeExpressionTest"),
+            expr=TypeSpecification(
+                expr=BinaryOperator(
+                    expr1=Int(2),
+                    op=Operator("+"),
+                    expr2=Int(9)
+                ),
+                type=NamedType(id=Identifier("Int"))
+            )
+    )
+
+    check(module, 11)
